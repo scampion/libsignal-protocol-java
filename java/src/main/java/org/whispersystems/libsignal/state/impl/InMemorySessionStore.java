@@ -14,6 +14,7 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 public class InMemorySessionStore implements SessionStore {
 
@@ -71,5 +72,10 @@ public class InMemorySessionStore implements SessionStore {
         sessions.remove(key);
       }
     }
+  }
+
+  @Override
+  public Set<SignalProtocolAddress> getAllAddresses() {
+    return sessions.keySet();
   }
 }

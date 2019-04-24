@@ -8,6 +8,7 @@ package org.whispersystems.libsignal.state;
 import org.whispersystems.libsignal.SignalProtocolAddress;
 
 import java.util.List;
+import java.util.Set;
 
 /**
  * The interface to the durable store of session state information
@@ -67,5 +68,12 @@ public interface SessionStore {
    * @param name the name of the remote client.
    */
   public void deleteAllSessions(String name);
+
+  /**
+   * Retrieve all addresses contained in the {@link SessionState}
+   *
+   * @return all addresses.
+   */
+  public Set<SignalProtocolAddress> getAllAddresses();
 
 }

@@ -15,6 +15,7 @@ import org.whispersystems.libsignal.state.SessionRecord;
 import org.whispersystems.libsignal.state.SignedPreKeyRecord;
 
 import java.util.List;
+import java.util.Set;
 
 public class InMemorySignalProtocolStore implements SignalProtocolStore {
 
@@ -101,6 +102,11 @@ public class InMemorySignalProtocolStore implements SignalProtocolStore {
   @Override
   public void deleteAllSessions(String name) {
     sessionStore.deleteAllSessions(name);
+  }
+
+  @Override
+  public Set<SignalProtocolAddress> getAllAddresses() {
+    return sessionStore.getAllAddresses();
   }
 
   @Override
