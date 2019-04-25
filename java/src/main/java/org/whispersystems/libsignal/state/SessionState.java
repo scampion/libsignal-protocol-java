@@ -152,6 +152,14 @@ public class SessionState {
     return new ECKeyPair(publicKey, privateKey);
   }
 
+  public byte[] getLatestRatchetKeyPrivate() {
+    return this.sessionStructure.getSenderChain().getSenderRatchetKeyPrivate().toByteArray();
+  }
+
+  public byte[] getLatestRatchetKeyPublic() {
+    return this.sessionStructure.getSenderChain().getSenderRatchetKey().toByteArray();
+  }
+
   public boolean hasReceiverChain(ECPublicKey senderEphemeral) {
     return getReceiverChain(senderEphemeral) != null;
   }
