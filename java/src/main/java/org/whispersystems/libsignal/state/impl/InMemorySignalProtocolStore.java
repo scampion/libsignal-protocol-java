@@ -110,6 +110,11 @@ public class InMemorySignalProtocolStore implements SignalProtocolStore {
   }
 
   @Override
+  public void setIdentityKeyPair(IdentityKeyPair ikp) {
+    identityKeyStore.setIdentityKeyPair(ikp);
+  }
+
+  @Override
   public SignedPreKeyRecord loadSignedPreKey(int signedPreKeyId) throws InvalidKeyIdException {
     return signedPreKeyStore.loadSignedPreKey(signedPreKeyId);
   }

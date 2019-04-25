@@ -16,6 +16,8 @@ import org.whispersystems.libsignal.SignalProtocolAddress;
  */
 public interface IdentityKeyStore {
 
+  void setIdentityKeyPair(IdentityKeyPair ikp);
+
   public enum Direction {
     SENDING, RECEIVING
   }
