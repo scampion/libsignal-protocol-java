@@ -27,6 +27,7 @@ import org.whispersystems.libsignal.state.StorageProtos.SessionStructure.Pending
 import org.whispersystems.libsignal.util.Pair;
 import org.whispersystems.libsignal.util.guava.Optional;
 
+import java.security.PublicKey;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
@@ -158,6 +159,21 @@ public class SessionState {
 
   public byte[] getLatestRatchetKeyPublic() {
     return this.sessionStructure.getSenderChain().getSenderRatchetKey().toByteArray();
+  }
+
+  public ECPublicKey getLatestReceiverRatchetKey() {
+    List<Chain> receiverChains = sessionStructure.getReceiverChainsList();
+    if (receiverChains.size() > 0) {
+      ByteString senderRatchetKey = receiverChains.get(receiverChains.size() - 1).getSenderRatchetKey();
+      try {
+        ECPublicKey chainSenderRatchetKey = Curve.decodePoint(senderRatchetKey.toByteArray(), 0);
+        return chainSenderRatchetKey;
+      } catch (InvalidKeyException e) {
+        Log.w("SessionRecordV2", e);
+        e.printStackTrace();
+      }
+    }
+    return null;
   }
 
   public boolean hasReceiverChain(ECPublicKey senderEphemeral) {
