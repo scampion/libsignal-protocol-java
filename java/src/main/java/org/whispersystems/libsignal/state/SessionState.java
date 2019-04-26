@@ -176,6 +176,11 @@ public class SessionState {
     return null;
   }
 
+  public RootKey getReceiverRootKey() {
+    return new RootKey(HKDF.createFor(getSessionVersion()),
+            this.sessionStructure.getReceiverRootKey().toByteArray());
+  }
+  
   public boolean hasReceiverChain(ECPublicKey senderEphemeral) {
     return getReceiverChain(senderEphemeral) != null;
   }

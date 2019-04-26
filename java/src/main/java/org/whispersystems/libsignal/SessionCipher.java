@@ -424,6 +424,33 @@ public class SessionCipher {
     }
   }
 
+  public void half_ratchet(SessionState sessionState) throws InvalidKeyException, InvalidMessageException, DuplicateMessageException {
+    ChainKey chainKey = getOrCreateChainKey(sessionState);
+    ECPublicKey theirEphemeral = sessionState.getLatestReceiverRatchetKey();
+    getOrCreateMessageKeys(sessionState, theirEphemeral, chainKey, 1);
+  }
+
+  private ChainKey getOrCreateChainKey(SessionState sessionState)
+          throws InvalidMessageException, InvalidKeyException {
+    try {
+      RootKey rootKey = sessionState.getReceiverRootKey();
+      ECKeyPair ourNewEphemeral = Curve.generateKeyPair();
+      ECPublicKey theirEphemeral = sessionState.getLatestReceiverRatchetKey();
+      Pair<RootKey, ChainKey> chain = rootKey.createChain(theirEphemeral, ourNewEphemeral);
+
+      sessionState.setRootKey(chain.first());
+      sessionState.setPreviousCounter(Math.max(sessionState.getSenderChainKey().getIndex() - 1, 0));
+      sessionState.setSenderChain(ourNewEphemeral, chain.second());
+
+      return chain.second();
+    }
+    catch(InvalidKeyException e) {
+      throw new InvalidMessageException(e);
+    }
+  }
+
+
+
   private static class NullDecryptionCallback implements DecryptionCallback {
     @Override
     public void handlePlaintext(byte[] plaintext) {}
