@@ -356,8 +356,9 @@ public class SessionCipher {
         sessionState.addReceiverChain(theirEphemeral, receiverChain.second());
         sessionState.setPreviousCounter(Math.max(sessionState.getSenderChainKey().getIndex()-1, 0));
         sessionState.setSenderChain(ourNewEphemeral, senderChain.second());
+        sessionState.setReceiverRootKey(receiverChain.first());
 
-        return receiverChain.second();
+          return receiverChain.second();
       }
     } catch (InvalidKeyException e) {
       throw new InvalidMessageException(e);
@@ -427,7 +428,6 @@ public class SessionCipher {
   public void half_ratchet(SessionState sessionState) throws InvalidKeyException, InvalidMessageException, DuplicateMessageException {
     ChainKey chainKey = getOrCreateChainKey(sessionState);
     ECPublicKey theirEphemeral = sessionState.getLatestReceiverRatchetKey();
-    getOrCreateMessageKeys(sessionState, theirEphemeral, chainKey, 1);
   }
 
   private ChainKey getOrCreateChainKey(SessionState sessionState)

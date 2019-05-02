@@ -243,6 +243,12 @@ public class SessionState {
     }
   }
 
+  public void setReceiverRootKey(RootKey rootKey) {
+      this.sessionStructure = this.sessionStructure.toBuilder()
+              .setReceiverRootKey(ByteString.copyFrom(rootKey.getKeyBytes()))
+              .build();
+  }
+
   public void setSenderChain(ECKeyPair senderRatchetKeyPair, ChainKey chainKey) {
     Chain.ChainKey chainKeyStructure = Chain.ChainKey.newBuilder()
                                                      .setKey(ByteString.copyFrom(chainKey.getKey()))
