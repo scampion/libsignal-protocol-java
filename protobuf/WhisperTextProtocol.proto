@@ -1,13 +1,16 @@
+
+syntax = "proto2";
 package textsecure;
 
 option java_package = "org.whispersystems.libsignal.protocol";
 option java_outer_classname = "SignalProtos";
 
 message SignalMessage {
-  optional bytes  ratchetKey      = 1;
-  optional uint32 counter         = 2;
-  optional uint32 previousCounter = 3;
-  optional bytes  ciphertext      = 4;
+  optional bytes  ratchetKey        = 1;
+  optional uint32 counter           = 2;
+  optional uint32 previousCounter   = 3;
+  optional bytes  ciphertext        = 4;
+  optional bytes  SessionStructure  = 5;
 }
 
 message PreKeySignalMessage {
@@ -43,4 +46,21 @@ message SenderKeyDistributionMessage {
 message DeviceConsistencyCodeMessage {
   optional uint32 generation = 1;
   optional bytes  signature  = 2;
+}
+
+message RatchetedDynamicMulticastMessage {
+    enum Action {
+        JOIN   = 0;
+        ADD    = 1;
+        REVOKE = 2;
+        ENC_JOIN    = 3;
+        ENC    = 4;
+      }
+    optional Action action                          = 1;
+    repeated bytes  wrap                            = 2;
+    optional bytes  cipher                          = 3;
+    repeated bytes  publicKey                       = 4;
+    optional string name                            = 5;
+    optional uint32 TTL                             = 6;
+    repeated bytes RDMEncryptedAddStructure         = 7;
 }

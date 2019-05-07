@@ -5,12 +5,17 @@
  */
 package org.whispersystems.libsignal.state.impl;
 
+import com.google.protobuf.ByteString;
+
 import org.whispersystems.libsignal.InvalidKeyIdException;
 import org.whispersystems.libsignal.state.PreKeyRecord;
 import org.whispersystems.libsignal.state.PreKeyStore;
+import org.whispersystems.libsignal.state.StorageProtos;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 public class InMemoryPreKeyStore implements PreKeyStore {
@@ -45,3 +50,4 @@ public class InMemoryPreKeyStore implements PreKeyStore {
     store.remove(preKeyId);
   }
 }
+

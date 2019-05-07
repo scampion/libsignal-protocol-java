@@ -21,7 +21,6 @@ import org.whispersystems.libsignal.state.SessionRecord;
 import org.whispersystems.libsignal.state.SessionState;
 import org.whispersystems.libsignal.state.SessionStore;
 import org.whispersystems.libsignal.state.SignedPreKeyStore;
-import org.whispersystems.libsignal.util.ByteUtil;
 import org.whispersystems.libsignal.util.Pair;
 import org.whispersystems.libsignal.util.guava.Optional;
 
@@ -51,318 +50,439 @@ import static org.whispersystems.libsignal.state.SessionState.UnacknowledgedPreK
  */
 public class SessionCipher {
 
-  public static final Object SESSION_LOCK = new Object();
+    public static final Object SESSION_LOCK = new Object();
 
-  private final SessionStore          sessionStore;
-  private final IdentityKeyStore      identityKeyStore;
-  private final SessionBuilder        sessionBuilder;
-  private final PreKeyStore           preKeyStore;
-  private final SignalProtocolAddress remoteAddress;
+    private final SessionStore sessionStore;
+    private final IdentityKeyStore identityKeyStore;
+    private final SessionBuilder sessionBuilder;
+    private final PreKeyStore preKeyStore;
+    private final SignalProtocolAddress remoteAddress;
 
-  /**
-   * Construct a SessionCipher for encrypt/decrypt operations on a session.
-   * In order to use SessionCipher, a session must have already been created
-   * and stored using {@link SessionBuilder}.
-   *
-   * @param  sessionStore The {@link SessionStore} that contains a session for this recipient.
-   * @param  remoteAddress  The remote address that messages will be encrypted to or decrypted from.
-   */
-  public SessionCipher(SessionStore sessionStore, PreKeyStore preKeyStore,
-                       SignedPreKeyStore signedPreKeyStore, IdentityKeyStore identityKeyStore,
-                       SignalProtocolAddress remoteAddress)
-  {
-    this.sessionStore     = sessionStore;
-    this.preKeyStore      = preKeyStore;
-    this.identityKeyStore = identityKeyStore;
-    this.remoteAddress    = remoteAddress;
-    this.sessionBuilder   = new SessionBuilder(sessionStore, preKeyStore, signedPreKeyStore,
-                                               identityKeyStore, remoteAddress);
-  }
-
-  public SessionCipher(SignalProtocolStore store, SignalProtocolAddress remoteAddress) {
-    this(store, store, store, store, remoteAddress);
-  }
-
-  /**
-   * Encrypt a message.
-   *
-   * @param  paddedMessage The plaintext message bytes, optionally padded to a constant multiple.
-   * @return A ciphertext message encrypted to the recipient+device tuple.
-   */
-  public CiphertextMessage encrypt(byte[] paddedMessage) throws UntrustedIdentityException {
-    synchronized (SESSION_LOCK) {
-      SessionRecord sessionRecord   = sessionStore.loadSession(remoteAddress);
-      SessionState  sessionState    = sessionRecord.getSessionState();
-      ChainKey      chainKey        = sessionState.getSenderChainKey();
-      MessageKeys   messageKeys     = chainKey.getMessageKeys();
-      ECPublicKey   senderEphemeral = sessionState.getSenderRatchetKey();
-      int           previousCounter = sessionState.getPreviousCounter();
-      int           sessionVersion  = sessionState.getSessionVersion();
-
-      byte[]            ciphertextBody    = getCiphertext(messageKeys, paddedMessage);
-      CiphertextMessage ciphertextMessage = new SignalMessage(sessionVersion, messageKeys.getMacKey(),
-                                                              senderEphemeral, chainKey.getIndex(),
-                                                              previousCounter, ciphertextBody,
-                                                              sessionState.getLocalIdentityKey(),
-                                                              sessionState.getRemoteIdentityKey());
-
-      if (sessionState.hasUnacknowledgedPreKeyMessage()) {
-        UnacknowledgedPreKeyMessageItems items = sessionState.getUnacknowledgedPreKeyMessageItems();
-        int localRegistrationId = sessionState.getLocalRegistrationId();
-
-        ciphertextMessage = new PreKeySignalMessage(sessionVersion, localRegistrationId, items.getPreKeyId(),
-                                                    items.getSignedPreKeyId(), items.getBaseKey(),
-                                                    sessionState.getLocalIdentityKey(),
-                                                    (SignalMessage) ciphertextMessage);
-      }
-
-      sessionState.setSenderChainKey(chainKey.getNextChainKey());
-
-      if (!identityKeyStore.isTrustedIdentity(remoteAddress, sessionState.getRemoteIdentityKey(), IdentityKeyStore.Direction.SENDING)) {
-        throw new UntrustedIdentityException(remoteAddress.getName(), sessionState.getRemoteIdentityKey());
-      }
-
-      identityKeyStore.saveIdentity(remoteAddress, sessionState.getRemoteIdentityKey());
-      sessionStore.storeSession(remoteAddress, sessionRecord);
-      return ciphertextMessage;
+    /**
+     * Construct a SessionCipher for encrypt/decrypt operations on a session.
+     * In order to use SessionCipher, a session must have already been created
+     * and stored using {@link SessionBuilder}.
+     *
+     * @param sessionStore  The {@link SessionStore} that contains a session for this recipient.
+     * @param remoteAddress The remote address that messages will be encrypted to or decrypted from.
+     */
+    public SessionCipher(SessionStore sessionStore, PreKeyStore preKeyStore,
+                         SignedPreKeyStore signedPreKeyStore, IdentityKeyStore identityKeyStore,
+                         SignalProtocolAddress remoteAddress) {
+        this.sessionStore = sessionStore;
+        this.preKeyStore = preKeyStore;
+        this.identityKeyStore = identityKeyStore;
+        this.remoteAddress = remoteAddress;
+        this.sessionBuilder = new SessionBuilder(sessionStore, preKeyStore, signedPreKeyStore,
+                identityKeyStore, remoteAddress);
     }
-  }
 
-  /**
-   * Decrypt a message.
-   *
-   * @param  ciphertext The {@link PreKeySignalMessage} to decrypt.
-   *
-   * @return The plaintext.
-   * @throws InvalidMessageException if the input is not valid ciphertext.
-   * @throws DuplicateMessageException if the input is a message that has already been received.
-   * @throws LegacyMessageException if the input is a message formatted by a protocol version that
-   *                                is no longer supported.
-   * @throws InvalidKeyIdException when there is no local {@link org.whispersystems.libsignal.state.PreKeyRecord}
-   *                               that corresponds to the PreKey ID in the message.
-   * @throws InvalidKeyException when the message is formatted incorrectly.
-   * @throws UntrustedIdentityException when the {@link IdentityKey} of the sender is untrusted.
-   */
-  public byte[] decrypt(PreKeySignalMessage ciphertext)
-      throws DuplicateMessageException, LegacyMessageException, InvalidMessageException,
-             InvalidKeyIdException, InvalidKeyException, UntrustedIdentityException
-  {
-    return decrypt(ciphertext, new NullDecryptionCallback());
-  }
-
-  /**
-   * Decrypt a message.
-   *
-   * @param  ciphertext The {@link PreKeySignalMessage} to decrypt.
-   * @param  callback   A callback that is triggered after decryption is complete,
-   *                    but before the updated session state has been committed to the session
-   *                    DB.  This allows some implementations to store the committed plaintext
-   *                    to a DB first, in case they are concerned with a crash happening between
-   *                    the time the session state is updated but before they're able to store
-   *                    the plaintext to disk.
-   *
-   * @return The plaintext.
-   * @throws InvalidMessageException if the input is not valid ciphertext.
-   * @throws DuplicateMessageException if the input is a message that has already been received.
-   * @throws LegacyMessageException if the input is a message formatted by a protocol version that
-   *                                is no longer supported.
-   * @throws InvalidKeyIdException when there is no local {@link org.whispersystems.libsignal.state.PreKeyRecord}
-   *                               that corresponds to the PreKey ID in the message.
-   * @throws InvalidKeyException when the message is formatted incorrectly.
-   * @throws UntrustedIdentityException when the {@link IdentityKey} of the sender is untrusted.
-   */
-  public byte[] decrypt(PreKeySignalMessage ciphertext, DecryptionCallback callback)
-      throws DuplicateMessageException, LegacyMessageException, InvalidMessageException,
-             InvalidKeyIdException, InvalidKeyException, UntrustedIdentityException
-  {
-    synchronized (SESSION_LOCK) {
-      SessionRecord     sessionRecord    = sessionStore.loadSession(remoteAddress);
-      Optional<Integer> unsignedPreKeyId = sessionBuilder.process(sessionRecord, ciphertext);
-      byte[]            plaintext        = decrypt(sessionRecord, ciphertext.getWhisperMessage());
-
-      callback.handlePlaintext(plaintext);
-
-      sessionStore.storeSession(remoteAddress, sessionRecord);
-
-      if (unsignedPreKeyId.isPresent()) {
-        preKeyStore.removePreKey(unsignedPreKeyId.get());
-      }
-
-      return plaintext;
+    public SessionCipher(SignalProtocolStore store, SignalProtocolAddress remoteAddress) {
+        this(store, store, store, store, remoteAddress);
     }
-  }
 
-  /**
-   * Decrypt a message.
-   *
-   * @param  ciphertext The {@link SignalMessage} to decrypt.
-   *
-   * @return The plaintext.
-   * @throws InvalidMessageException if the input is not valid ciphertext.
-   * @throws DuplicateMessageException if the input is a message that has already been received.
-   * @throws LegacyMessageException if the input is a message formatted by a protocol version that
-   *                                is no longer supported.
-   * @throws NoSessionException if there is no established session for this contact.
-   */
-  public byte[] decrypt(SignalMessage ciphertext)
-      throws InvalidMessageException, DuplicateMessageException, LegacyMessageException,
-      NoSessionException, UntrustedIdentityException
-  {
-    return decrypt(ciphertext, new NullDecryptionCallback());
-  }
+    /**
+     * Encrypt a message.
+     *
+     * @param paddedMessage The plaintext message bytes, optionally padded to a constant multiple.
+     * @return A ciphertext message encrypted to the recipient+device tuple.
+     */
+    public CiphertextMessage encrypt(byte[] paddedMessage) throws UntrustedIdentityException {
+        synchronized (SESSION_LOCK) {
+            SessionRecord sessionRecord = sessionStore.loadSession(remoteAddress);
+            SessionState sessionState = sessionRecord.getSessionState();
+            ChainKey chainKey = sessionState.getSenderChainKey();
+            MessageKeys messageKeys = chainKey.getMessageKeys();
+            ECPublicKey senderEphemeral = sessionState.getSenderRatchetKey();
+            int previousCounter = sessionState.getPreviousCounter();
+            int sessionVersion = sessionState.getSessionVersion();
 
-  /**
-   * Decrypt a message.
-   *
-   * @param  ciphertext The {@link SignalMessage} to decrypt.
-   * @param  callback   A callback that is triggered after decryption is complete,
-   *                    but before the updated session state has been committed to the session
-   *                    DB.  This allows some implementations to store the committed plaintext
-   *                    to a DB first, in case they are concerned with a crash happening between
-   *                    the time the session state is updated but before they're able to store
-   *                    the plaintext to disk.
-   *
-   * @return The plaintext.
-   * @throws InvalidMessageException if the input is not valid ciphertext.
-   * @throws DuplicateMessageException if the input is a message that has already been received.
-   * @throws LegacyMessageException if the input is a message formatted by a protocol version that
-   *                                is no longer supported.
-   * @throws NoSessionException if there is no established session for this contact.
-   */
-  public byte[] decrypt(SignalMessage ciphertext, DecryptionCallback callback)
-      throws InvalidMessageException, DuplicateMessageException, LegacyMessageException,
-             NoSessionException, UntrustedIdentityException
-  {
-    synchronized (SESSION_LOCK) {
+            byte[] ciphertextBody = getCiphertext(messageKeys, paddedMessage);
+            CiphertextMessage ciphertextMessage = new SignalMessage(sessionVersion, messageKeys.getMacKey(),
+                    senderEphemeral, chainKey.getIndex(),
+                    previousCounter, ciphertextBody,
+                    sessionState.getLocalIdentityKey(),
+                    sessionState.getRemoteIdentityKey());
 
-      if (!sessionStore.containsSession(remoteAddress)) {
-        throw new NoSessionException("No session for: " + remoteAddress);
-      }
+            if (sessionState.hasUnacknowledgedPreKeyMessage()) {
+                UnacknowledgedPreKeyMessageItems items = sessionState.getUnacknowledgedPreKeyMessageItems();
+                int localRegistrationId = sessionState.getLocalRegistrationId();
 
-      SessionRecord sessionRecord = sessionStore.loadSession(remoteAddress);
-      byte[]        plaintext     = decrypt(sessionRecord, ciphertext);
+                ciphertextMessage = new PreKeySignalMessage(sessionVersion, localRegistrationId, items.getPreKeyId(),
+                        items.getSignedPreKeyId(), items.getBaseKey(),
+                        sessionState.getLocalIdentityKey(),
+                        (SignalMessage) ciphertextMessage);
+            }
 
-      if (!identityKeyStore.isTrustedIdentity(remoteAddress, sessionRecord.getSessionState().getRemoteIdentityKey(), IdentityKeyStore.Direction.RECEIVING)) {
-        throw new UntrustedIdentityException(remoteAddress.getName(), sessionRecord.getSessionState().getRemoteIdentityKey());
-      }
+            sessionState.setSenderChainKey(chainKey.getNextChainKey());
 
-      identityKeyStore.saveIdentity(remoteAddress, sessionRecord.getSessionState().getRemoteIdentityKey());
+            if (!identityKeyStore.isTrustedIdentity(remoteAddress, sessionState.getRemoteIdentityKey(), IdentityKeyStore.Direction.SENDING)) {
+                throw new UntrustedIdentityException(remoteAddress.getName(), sessionState.getRemoteIdentityKey());
+            }
 
-      callback.handlePlaintext(plaintext);
-
-      sessionStore.storeSession(remoteAddress, sessionRecord);
-
-      return plaintext;
-    }
-  }
-
-  private byte[] decrypt(SessionRecord sessionRecord, SignalMessage ciphertext)
-      throws DuplicateMessageException, LegacyMessageException, InvalidMessageException
-  {
-    synchronized (SESSION_LOCK) {
-      Iterator<SessionState> previousStates = sessionRecord.getPreviousSessionStates().iterator();
-      List<Exception>        exceptions     = new LinkedList<>();
-
-      try {
-        SessionState sessionState = new SessionState(sessionRecord.getSessionState());
-        byte[]       plaintext    = decrypt(sessionState, ciphertext);
-
-        sessionRecord.setState(sessionState);
-        return plaintext;
-      } catch (InvalidMessageException e) {
-        exceptions.add(e);
-      }
-
-      while (previousStates.hasNext()) {
-        try {
-          SessionState promotedState = new SessionState(previousStates.next());
-          byte[]       plaintext     = decrypt(promotedState, ciphertext);
-
-          previousStates.remove();
-          sessionRecord.promoteState(promotedState);
-
-          return plaintext;
-        } catch (InvalidMessageException e) {
-          exceptions.add(e);
+            identityKeyStore.saveIdentity(remoteAddress, sessionState.getRemoteIdentityKey());
+            sessionStore.storeSession(remoteAddress, sessionRecord);
+            return ciphertextMessage;
         }
-      }
-
-      throw new InvalidMessageException("No valid sessions.", exceptions);
-    }
-  }
-
-  private byte[] decrypt(SessionState sessionState, SignalMessage ciphertextMessage)
-      throws InvalidMessageException, DuplicateMessageException, LegacyMessageException
-  {
-    if (!sessionState.hasSenderChain()) {
-      throw new InvalidMessageException("Uninitialized session!");
     }
 
-    if (ciphertextMessage.getMessageVersion() != sessionState.getSessionVersion()) {
-      throw new InvalidMessageException(String.format("Message version %d, but session version %d",
-                                                      ciphertextMessage.getMessageVersion(),
-                                                      sessionState.getSessionVersion()));
+    /**
+     * Decrypt a message.
+     *
+     * @param ciphertext The {@link PreKeySignalMessage} to decrypt.
+     * @return The plaintext.
+     * @throws InvalidMessageException    if the input is not valid ciphertext.
+     * @throws DuplicateMessageException  if the input is a message that has already been received.
+     * @throws LegacyMessageException     if the input is a message formatted by a protocol version that
+     *                                    is no longer supported.
+     * @throws InvalidKeyIdException      when there is no local {@link org.whispersystems.libsignal.state.PreKeyRecord}
+     *                                    that corresponds to the PreKey ID in the message.
+     * @throws InvalidKeyException        when the message is formatted incorrectly.
+     * @throws UntrustedIdentityException when the {@link IdentityKey} of the sender is untrusted.
+     */
+    public byte[] decrypt(PreKeySignalMessage ciphertext)
+            throws DuplicateMessageException, LegacyMessageException, InvalidMessageException,
+            InvalidKeyIdException, InvalidKeyException, UntrustedIdentityException {
+        return decrypt(ciphertext, new NullDecryptionCallback());
     }
 
-    ECPublicKey    theirEphemeral    = ciphertextMessage.getSenderRatchetKey();
-    int            counter           = ciphertextMessage.getCounter();
-    ChainKey       chainKey          = getOrCreateChainKey(sessionState, theirEphemeral);
-    MessageKeys    messageKeys       = getOrCreateMessageKeys(sessionState, theirEphemeral,
-                                                              chainKey, counter);
+    /**
+     * Decrypt a message.
+     *
+     * @param ciphertext The {@link PreKeySignalMessage} to decrypt.
+     * @param callback   A callback that is triggered after decryption is complete,
+     *                   but before the updated session state has been committed to the session
+     *                   DB.  This allows some implementations to store the committed plaintext
+     *                   to a DB first, in case they are concerned with a crash happening between
+     *                   the time the session state is updated but before they're able to store
+     *                   the plaintext to disk.
+     * @return The plaintext.
+     * @throws InvalidMessageException    if the input is not valid ciphertext.
+     * @throws DuplicateMessageException  if the input is a message that has already been received.
+     * @throws LegacyMessageException     if the input is a message formatted by a protocol version that
+     *                                    is no longer supported.
+     * @throws InvalidKeyIdException      when there is no local {@link org.whispersystems.libsignal.state.PreKeyRecord}
+     *                                    that corresponds to the PreKey ID in the message.
+     * @throws InvalidKeyException        when the message is formatted incorrectly.
+     * @throws UntrustedIdentityException when the {@link IdentityKey} of the sender is untrusted.
+     */
+    public byte[] decrypt(PreKeySignalMessage ciphertext, DecryptionCallback callback)
+            throws DuplicateMessageException, LegacyMessageException, InvalidMessageException,
+            InvalidKeyIdException, InvalidKeyException, UntrustedIdentityException {
+        synchronized (SESSION_LOCK) {
+            SessionRecord sessionRecord = sessionStore.loadSession(remoteAddress);
+            Optional<Integer> unsignedPreKeyId = sessionBuilder.process(sessionRecord, ciphertext);
+            byte[] plaintext = decrypt(sessionRecord, ciphertext.getWhisperMessage());
 
-    ciphertextMessage.verifyMac(sessionState.getRemoteIdentityKey(),
-                                sessionState.getLocalIdentityKey(),
-                                messageKeys.getMacKey());
+            callback.handlePlaintext(plaintext);
 
-    byte[] plaintext = getPlaintext(messageKeys, ciphertextMessage.getBody());
+            sessionStore.storeSession(remoteAddress, sessionRecord);
 
-    sessionState.clearUnacknowledgedPreKeyMessage();
+            if (unsignedPreKeyId.isPresent()) {
+                preKeyStore.removePreKey(unsignedPreKeyId.get());
+            }
 
-    return plaintext;
-  }
-
-  public int getRemoteRegistrationId() {
-    synchronized (SESSION_LOCK) {
-      SessionRecord record = sessionStore.loadSession(remoteAddress);
-      return record.getSessionState().getRemoteRegistrationId();
+            return plaintext;
+        }
     }
-  }
 
-  public int getSessionVersion() {
-    synchronized (SESSION_LOCK) {
-      if (!sessionStore.containsSession(remoteAddress)) {
-        throw new IllegalStateException(String.format("No session for (%s)!", remoteAddress));
-      }
-
-      SessionRecord record = sessionStore.loadSession(remoteAddress);
-      return record.getSessionState().getSessionVersion();
+    /**
+     * Decrypt a message.
+     *
+     * @param ciphertext The {@link SignalMessage} to decrypt.
+     * @return The plaintext.
+     * @throws InvalidMessageException   if the input is not valid ciphertext.
+     * @throws DuplicateMessageException if the input is a message that has already been received.
+     * @throws LegacyMessageException    if the input is a message formatted by a protocol version that
+     *                                   is no longer supported.
+     * @throws NoSessionException        if there is no established session for this contact.
+     */
+    public byte[] decrypt(SignalMessage ciphertext)
+            throws InvalidMessageException, DuplicateMessageException, LegacyMessageException,
+            NoSessionException, UntrustedIdentityException {
+        return decrypt(ciphertext, new NullDecryptionCallback());
     }
-  }
 
-  private ChainKey getOrCreateChainKey(SessionState sessionState, ECPublicKey theirEphemeral)
-      throws InvalidMessageException
-  {
-    try {
-      if (sessionState.hasReceiverChain(theirEphemeral)) {
-        return sessionState.getReceiverChainKey(theirEphemeral);
-      } else {
-        RootKey                 rootKey         = sessionState.getRootKey();
-        ECKeyPair               ourEphemeral    = sessionState.getSenderRatchetKeyPair();
-        Pair<RootKey, ChainKey> receiverChain   = rootKey.createChain(theirEphemeral, ourEphemeral);
-        ECKeyPair               ourNewEphemeral = Curve.generateKeyPair();
-        Pair<RootKey, ChainKey> senderChain     = receiverChain.first().createChain(theirEphemeral, ourNewEphemeral);
+    /**
+     * Decrypt a message.
+     *
+     * @param ciphertext The {@link SignalMessage} to decrypt.
+     * @param callback   A callback that is triggered after decryption is complete,
+     *                   but before the updated session state has been committed to the session
+     *                   DB.  This allows some implementations to store the committed plaintext
+     *                   to a DB first, in case they are concerned with a crash happening between
+     *                   the time the session state is updated but before they're able to store
+     *                   the plaintext to disk.
+     * @return The plaintext.
+     * @throws InvalidMessageException   if the input is not valid ciphertext.
+     * @throws DuplicateMessageException if the input is a message that has already been received.
+     * @throws LegacyMessageException    if the input is a message formatted by a protocol version that
+     *                                   is no longer supported.
+     * @throws NoSessionException        if there is no established session for this contact.
+     */
+    public byte[] decrypt(SignalMessage ciphertext, DecryptionCallback callback)
+            throws InvalidMessageException, DuplicateMessageException, LegacyMessageException,
+            NoSessionException, UntrustedIdentityException {
+        synchronized (SESSION_LOCK) {
 
-        sessionState.setRootKey(senderChain.first());
-        sessionState.addReceiverChain(theirEphemeral, receiverChain.second());
-        sessionState.setPreviousCounter(Math.max(sessionState.getSenderChainKey().getIndex()-1, 0));
-        sessionState.setSenderChain(ourNewEphemeral, senderChain.second());
+            if (!sessionStore.containsSession(remoteAddress)) {
+                throw new NoSessionException("No session for: " + remoteAddress);
+            }
 
-        return receiverChain.second();
-      }
-    } catch (InvalidKeyException e) {
-      throw new InvalidMessageException(e);
+            SessionRecord sessionRecord = sessionStore.loadSession(remoteAddress);
+            byte[] plaintext = decrypt(sessionRecord, ciphertext);
+
+            if (!identityKeyStore.isTrustedIdentity(remoteAddress, sessionRecord.getSessionState().getRemoteIdentityKey(), IdentityKeyStore.Direction.RECEIVING)) {
+                throw new UntrustedIdentityException(remoteAddress.getName(), sessionRecord.getSessionState().getRemoteIdentityKey());
+            }
+
+            identityKeyStore.saveIdentity(remoteAddress, sessionRecord.getSessionState().getRemoteIdentityKey());
+
+            callback.handlePlaintext(plaintext);
+
+            sessionStore.storeSession(remoteAddress, sessionRecord);
+
+            return plaintext;
+        }
     }
-  }
+
+    private byte[] decrypt(SessionRecord sessionRecord, SignalMessage ciphertext)
+            throws DuplicateMessageException, LegacyMessageException, InvalidMessageException {
+        synchronized (SESSION_LOCK) {
+            Iterator<SessionState> previousStates = sessionRecord.getPreviousSessionStates().iterator();
+            List<Exception> exceptions = new LinkedList<>();
+
+            try {
+                SessionState sessionState = new SessionState(sessionRecord.getSessionState());
+                byte[] plaintext = decrypt(sessionState, ciphertext);
+
+                sessionRecord.setState(sessionState);
+                return plaintext;
+            } catch (InvalidMessageException e) {
+                exceptions.add(e);
+                e.printStackTrace();
+            }
+
+            while (previousStates.hasNext()) {
+                try {
+                    SessionState promotedState = new SessionState(previousStates.next());
+                    byte[] plaintext = decrypt(promotedState, ciphertext);
+
+                    previousStates.remove();
+                    sessionRecord.promoteState(promotedState);
+
+                    return plaintext;
+                } catch (InvalidMessageException e) {
+                    exceptions.add(e);
+                    e.printStackTrace();
+                }
+            }
+            System.out.println(exceptions);
+            throw new InvalidMessageException("No valid sessions.", exceptions);
+        }
+    }
+
+    private byte[] decrypt(SessionState sessionState, SignalMessage ciphertextMessage)
+            throws InvalidMessageException, DuplicateMessageException, LegacyMessageException {
+        if (!sessionState.hasSenderChain()) {
+            throw new InvalidMessageException("Uninitialized session!");
+        }
+
+        if (ciphertextMessage.getMessageVersion() != sessionState.getSessionVersion()) {
+            throw new InvalidMessageException(String.format("Message version %d, but session version %d",
+                    ciphertextMessage.getMessageVersion(),
+                    sessionState.getSessionVersion()));
+        }
+
+        ECPublicKey theirEphemeral = ciphertextMessage.getSenderRatchetKey();
+        int counter = ciphertextMessage.getCounter();
+        ChainKey chainKey = getOrCreateChainKey(sessionState, theirEphemeral);
+        MessageKeys messageKeys = getOrCreateMessageKeys(sessionState, theirEphemeral,
+                chainKey, counter);
+
+        ciphertextMessage.verifyMac(sessionState.getRemoteIdentityKey(),
+                sessionState.getLocalIdentityKey(),
+                messageKeys.getMacKey());
+
+        byte[] plaintext = getPlaintext(messageKeys, ciphertextMessage.getBody());
+
+        sessionState.clearUnacknowledgedPreKeyMessage();
+
+        return plaintext;
+    }
+
+//
+//    //ajout Celine 23 avril pour test
+//    public byte[] decryptSingleRatchet(SignalMessage ciphertext)
+//            throws InvalidMessageException, DuplicateMessageException, LegacyMessageException,
+//            NoSessionException, UntrustedIdentityException {
+//        if (!sessionStore.containsSession(remoteAddress)) {
+//            throw new NoSessionException("No session for: " + remoteAddress);
+//        }
+//
+//        SessionRecord sessionRecord = sessionStore.loadSession(remoteAddress);
+//        SessionState sessionState = new SessionState(sessionRecord.getSessionState());
+//            byte[] plaintext = decrypt(sessionState, ciphertext);
+//            sessionRecord.setState(sessionState);
+//
+//
+//       // if (!identityKeyStore.isTrustedIdentity(remoteAddress, sessionRecord.getSessionState().getRemoteIdentityKey(), IdentityKeyStore.Direction.RECEIVING)) {
+//       //     throw new UntrustedIdentityException(remoteAddress.getName(), sessionRecord.getSessionState().getRemoteIdentityKey());
+//       // }
+//        // identityKeyStore.saveIdentity(remoteAddress, sessionRecord.getSessionState().getRemoteIdentityKey());
+//
+//        sessionStore.storeSession(remoteAddress, sessionRecord);
+//
+//        return plaintext;
+//    }
+//
+//
+//    private byte[] decryptSingleRatchet(SessionState sessionState, SignalMessage ciphertextMessage)
+//            throws InvalidMessageException, DuplicateMessageException, LegacyMessageException {
+//        if (!sessionState.hasSenderChain()) {
+//            throw new InvalidMessageException("Uninitialized session!");
+//        }
+//
+//        if (ciphertextMessage.getMessageVersion() != sessionState.getSessionVersion()) {
+//            throw new InvalidMessageException(String.format("Message version %d, but session version %d",
+//                    ciphertextMessage.getMessageVersion(),
+//                    sessionState.getSessionVersion()));
+//        }
+//
+//        ECPublicKey theirEphemeral = ciphertextMessage.getSenderRatchetKey();
+//        int counter = ciphertextMessage.getCounter();
+//        ChainKey chainKey = updateReceiverChain(sessionState, theirEphemeral);
+//        MessageKeys messageKeys = getOrCreateMessageKeys(sessionState, theirEphemeral,
+//                chainKey, counter);
+//
+//        ciphertextMessage.verifyMac(sessionState.getRemoteIdentityKey(),
+//                sessionState.getLocalIdentityKey(),
+//                messageKeys.getMacKey());
+//
+//        byte[] plaintext = getPlaintext(messageKeys, ciphertextMessage.getBody());
+//
+//        sessionState.clearUnacknowledgedPreKeyMessage();
+//
+//        return plaintext;
+//    }
+//    //fin ajout Céline
+
+
+
+    public int getRemoteRegistrationId() {
+        synchronized (SESSION_LOCK) {
+            SessionRecord record = sessionStore.loadSession(remoteAddress);
+            return record.getSessionState().getRemoteRegistrationId();
+        }
+    }
+
+    public int getSessionVersion() {
+        synchronized (SESSION_LOCK) {
+            if (!sessionStore.containsSession(remoteAddress)) {
+                throw new IllegalStateException(String.format("No session for (%s)!", remoteAddress));
+            }
+
+            SessionRecord record = sessionStore.loadSession(remoteAddress);
+            return record.getSessionState().getSessionVersion();
+        }
+    }
+
+    private ChainKey getOrCreateChainKey(SessionState sessionState, ECPublicKey theirEphemeral)
+            throws InvalidMessageException {
+        try {
+            if (sessionState.hasReceiverChain(theirEphemeral)) {
+                return sessionState.getReceiverChainKey(theirEphemeral);
+            } else {
+                RootKey rootKey = sessionState.getRootKey();
+                ECKeyPair ourEphemeral = sessionState.getSenderRatchetKeyPair();
+                Pair<RootKey, ChainKey> receiverChain = rootKey.createChain(theirEphemeral, ourEphemeral);
+
+                ECKeyPair ourNewEphemeral = Curve.generateKeyPair();
+                Pair<RootKey, ChainKey> senderChain = receiverChain.first().createChain(theirEphemeral, ourNewEphemeral);
+
+                sessionState.setRootKey(senderChain.first());
+                sessionState.setReceiverRootKey(receiverChain.first());
+                sessionState.addReceiverChain(theirEphemeral, receiverChain.second());
+                sessionState.setPreviousCounter(Math.max(sessionState.getSenderChainKey().getIndex() - 1, 0));
+                sessionState.setSenderChain(ourNewEphemeral, senderChain.second());
+                return receiverChain.second();
+            }
+        } catch (InvalidKeyException e) {
+            throw new InvalidMessageException(e);
+        }
+    }
+
+    private final static char[] hexArray = "0123456789ABCDEF".toCharArray();
+    public static java.lang.String bytesToHex(byte[] bytes) {
+        char[] hexChars = new char[bytes.length * 2];
+        for ( int j = 0; j < bytes.length; j++ ) {
+            int v = bytes[j] & 0xFF;
+            hexChars[j * 2] = hexArray[v >>> 4];
+            hexChars[j * 2 + 1] = hexArray[v & 0x0F];
+        }
+        return new java.lang.String(hexChars);
+    }
+
+    public void half_ratchet(SessionState sessionState) throws InvalidKeyException, InvalidMessageException, DuplicateMessageException {
+        ChainKey chainKey = getOrCreateChainKey(sessionState);
+        ECPublicKey theirEphemeral = sessionState.getLatestReceiverRatchetKey();
+       // getOrCreateMessageKeys(sessionState, theirEphemeral, chainKey, 1); deja fait dans encrypt
+    }
+
+    //ajout Celine 23 avril
+    //reprend le code de getOrCreateCHainKey mais supprime l'update de la senderChain
+    /**
+     *update only receiverChain (ratchet that does not need to generate new own ephemerals
+     **/
+    public ChainKey updateReceiverChain(SessionState sessionState, ECPublicKey theirEphemeral)
+        throws InvalidMessageException {
+            try {
+                if (sessionState.hasReceiverChain(theirEphemeral)) {
+                    return sessionState.getReceiverChainKey(theirEphemeral);
+                } else {
+                    RootKey rootKey = sessionState.getRootKey();
+                    ECKeyPair ourEphemeral = sessionState.getSenderRatchetKeyPair();
+                    Pair<RootKey, ChainKey> receiverChain = rootKey.createChain(theirEphemeral, ourEphemeral);
+
+                    sessionState.setRootKey(receiverChain.first());
+                    sessionState.addReceiverChain(theirEphemeral, receiverChain.second());
+                    //sessionState.setPreviousCounter(Math.max(sessionState.getSenderChainKey().getIndex() - 1, 0));
+
+
+                    return receiverChain.second();
+                }
+            } catch (InvalidKeyException e) {
+                throw new InvalidMessageException(e);
+            }
+        }
+
+    /**
+     *  Update only sender chain (ratchet without new receiver ratchet key)
+     *
+     * @param sessionState
+     * @return
+     * @throws InvalidMessageException
+     * @throws InvalidKeyException
+     */
+    private ChainKey getOrCreateChainKey(SessionState sessionState)
+            throws InvalidMessageException, InvalidKeyException {
+        try {
+            RootKey rootKey = sessionState.getReceiverRootKey();
+            ECKeyPair ourNewEphemeral = Curve.generateKeyPair();
+            ECPublicKey theirEphemeral = sessionState.getLatestReceiverRatchetKey();
+            Pair<RootKey, ChainKey> chain = rootKey.createChain(theirEphemeral, ourNewEphemeral);
+
+            sessionState.setRootKey(chain.first());
+            sessionState.setPreviousCounter(Math.max(sessionState.getSenderChainKey().getIndex() - 1, 0));
+            sessionState.setSenderChain(ourNewEphemeral, chain.second());
+
+            return chain.second();
+            }
+        catch(InvalidKeyException e) {
+            throw new InvalidMessageException(e);
+        }
+}
+
 
   private MessageKeys getOrCreateMessageKeys(SessionState sessionState,
                                              ECPublicKey theirEphemeral,

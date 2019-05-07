@@ -7,7 +7,10 @@ package org.whispersystems.libsignal.state;
 
 import org.whispersystems.libsignal.SignalProtocolAddress;
 
+import java.security.PrivateKey;
+import java.security.PublicKey;
 import java.util.List;
+import java.util.Map;
 
 /**
  * The interface to the durable store of session state information
@@ -68,4 +71,15 @@ public interface SessionStore {
    */
   public void deleteAllSessions(String name);
 
+
+  public void load(byte[] allsessions);
+
+  public Map<SignalProtocolAddress, byte[]> getAllSessions();
+
+  public byte[] dumpSessions(boolean keepRDM);
+
+
+  public void updateAllEphemeralPubKey(PublicKey newDevicePublicKey);
+
+  void setOwnEphemeralKeys(PrivateKey devicePrivateKey, PublicKey devicePublicKey);
 }

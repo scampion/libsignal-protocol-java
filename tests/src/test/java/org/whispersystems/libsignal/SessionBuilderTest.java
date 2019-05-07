@@ -24,10 +24,10 @@ public class SessionBuilderTest extends TestCase {
 
   public void testBasicPreKeyV2()
       throws InvalidKeyException, InvalidVersionException, InvalidMessageException, InvalidKeyIdException, DuplicateMessageException, LegacyMessageException, UntrustedIdentityException, NoSessionException {
-    SignalProtocolStore aliceStore          = new TestInMemorySignalProtocolStore();
+    SignalProtocolStore aliceStore          = new TestInMemoryRDMStore();
     SessionBuilder aliceSessionBuilder = new SessionBuilder(aliceStore, BOB_ADDRESS);
 
-    SignalProtocolStore bobStore      = new TestInMemorySignalProtocolStore();
+    SignalProtocolStore bobStore      = new TestInMemoryRDMStore();
     ECKeyPair    bobPreKeyPair = Curve.generateKeyPair();
     PreKeyBundle bobPreKey     = new PreKeyBundle(bobStore.getLocalRegistrationId(), 1,
                                                   31337, bobPreKeyPair.getPublicKey(),
@@ -45,10 +45,10 @@ public class SessionBuilderTest extends TestCase {
 
   public void testBasicPreKeyV3()
       throws InvalidKeyException, InvalidVersionException, InvalidMessageException, InvalidKeyIdException, DuplicateMessageException, LegacyMessageException, UntrustedIdentityException, NoSessionException {
-    SignalProtocolStore aliceStore          = new TestInMemorySignalProtocolStore();
+    SignalProtocolStore aliceStore          = new TestInMemoryRDMStore();
     SessionBuilder aliceSessionBuilder = new SessionBuilder(aliceStore, BOB_ADDRESS);
 
-    final SignalProtocolStore bobStore                 = new TestInMemorySignalProtocolStore();
+    final SignalProtocolStore bobStore                 = new TestInMemoryRDMStore();
           ECKeyPair    bobPreKeyPair            = Curve.generateKeyPair();
           ECKeyPair    bobSignedPreKeyPair      = Curve.generateKeyPair();
           byte[]       bobSignedPreKeySignature = Curve.calculateSignature(bobStore.getIdentityKeyPair().getPrivateKey(),
@@ -97,7 +97,7 @@ public class SessionBuilderTest extends TestCase {
 
     runInteraction(aliceStore, bobStore);
 
-    aliceStore          = new TestInMemorySignalProtocolStore();
+    aliceStore          = new TestInMemoryRDMStore();
     aliceSessionBuilder = new SessionBuilder(aliceStore, BOB_ADDRESS);
     aliceSessionCipher  = new SessionCipher(aliceStore, BOB_ADDRESS);
 
@@ -139,7 +139,7 @@ public class SessionBuilderTest extends TestCase {
   }
 
   public void testBadSignedPreKeySignature() throws InvalidKeyException, UntrustedIdentityException {
-    SignalProtocolStore aliceStore          = new TestInMemorySignalProtocolStore();
+    SignalProtocolStore aliceStore          = new TestInMemoryRDMStore();
     SessionBuilder aliceSessionBuilder = new SessionBuilder(aliceStore, BOB_ADDRESS);
 
     IdentityKeyStore bobIdentityKeyStore = new TestInMemoryIdentityKeyStore();
@@ -178,10 +178,10 @@ public class SessionBuilderTest extends TestCase {
   }
 
   public void testRepeatBundleMessageV2() throws InvalidKeyException, UntrustedIdentityException, InvalidVersionException, InvalidMessageException, InvalidKeyIdException, DuplicateMessageException, LegacyMessageException, NoSessionException {
-    SignalProtocolStore aliceStore          = new TestInMemorySignalProtocolStore();
+    SignalProtocolStore aliceStore          = new TestInMemoryRDMStore();
     SessionBuilder aliceSessionBuilder = new SessionBuilder(aliceStore, BOB_ADDRESS);
 
-    SignalProtocolStore bobStore = new TestInMemorySignalProtocolStore();
+    SignalProtocolStore bobStore = new TestInMemoryRDMStore();
 
     ECKeyPair bobPreKeyPair            = Curve.generateKeyPair();
     ECKeyPair bobSignedPreKeyPair      = Curve.generateKeyPair();
@@ -206,10 +206,10 @@ public class SessionBuilderTest extends TestCase {
   }
 
   public void testRepeatBundleMessageV3() throws InvalidKeyException, UntrustedIdentityException, InvalidVersionException, InvalidMessageException, InvalidKeyIdException, DuplicateMessageException, LegacyMessageException, NoSessionException {
-    SignalProtocolStore aliceStore          = new TestInMemorySignalProtocolStore();
+    SignalProtocolStore aliceStore          = new TestInMemoryRDMStore();
     SessionBuilder aliceSessionBuilder = new SessionBuilder(aliceStore, BOB_ADDRESS);
 
-    SignalProtocolStore bobStore = new TestInMemorySignalProtocolStore();
+    SignalProtocolStore bobStore = new TestInMemoryRDMStore();
 
     ECKeyPair bobPreKeyPair            = Curve.generateKeyPair();
     ECKeyPair bobSignedPreKeyPair      = Curve.generateKeyPair();
@@ -260,10 +260,10 @@ public class SessionBuilderTest extends TestCase {
   }
 
   public void testBadMessageBundle() throws InvalidKeyException, UntrustedIdentityException, InvalidVersionException, InvalidMessageException, DuplicateMessageException, LegacyMessageException, InvalidKeyIdException {
-    SignalProtocolStore aliceStore          = new TestInMemorySignalProtocolStore();
+    SignalProtocolStore aliceStore          = new TestInMemoryRDMStore();
     SessionBuilder aliceSessionBuilder = new SessionBuilder(aliceStore, BOB_ADDRESS);
 
-    SignalProtocolStore bobStore = new TestInMemorySignalProtocolStore();
+    SignalProtocolStore bobStore = new TestInMemoryRDMStore();
 
     ECKeyPair bobPreKeyPair            = Curve.generateKeyPair();
     ECKeyPair bobSignedPreKeyPair      = Curve.generateKeyPair();
@@ -313,10 +313,10 @@ public class SessionBuilderTest extends TestCase {
   }
 
   public void testOptionalOneTimePreKey() throws Exception {
-    SignalProtocolStore aliceStore          = new TestInMemorySignalProtocolStore();
+    SignalProtocolStore aliceStore          = new TestInMemoryRDMStore();
     SessionBuilder aliceSessionBuilder = new SessionBuilder(aliceStore, BOB_ADDRESS);
 
-    SignalProtocolStore bobStore = new TestInMemorySignalProtocolStore();
+    SignalProtocolStore bobStore = new TestInMemoryRDMStore();
 
     ECKeyPair bobPreKeyPair            = Curve.generateKeyPair();
     ECKeyPair bobSignedPreKeyPair      = Curve.generateKeyPair();

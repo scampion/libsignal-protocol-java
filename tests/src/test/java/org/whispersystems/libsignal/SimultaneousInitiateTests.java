@@ -32,8 +32,8 @@ public class SimultaneousInitiateTests extends TestCase {
       InvalidMessageException, DuplicateMessageException, LegacyMessageException,
       InvalidKeyIdException, NoSessionException
   {
-    SignalProtocolStore aliceStore = new TestInMemorySignalProtocolStore();
-    SignalProtocolStore bobStore   = new TestInMemorySignalProtocolStore();
+    SignalProtocolStore aliceStore = new TestInMemoryRDMStore();
+    SignalProtocolStore bobStore   = new TestInMemoryRDMStore();
 
     PreKeyBundle alicePreKeyBundle = createAlicePreKeyBundle(aliceStore);
     PreKeyBundle bobPreKeyBundle = createBobPreKeyBundle(bobStore);
@@ -86,8 +86,8 @@ public class SimultaneousInitiateTests extends TestCase {
   }
 
   public void testLostSimultaneousInitiate() throws InvalidKeyException, UntrustedIdentityException, InvalidVersionException, InvalidMessageException, DuplicateMessageException, LegacyMessageException, InvalidKeyIdException, NoSessionException {
-    SignalProtocolStore aliceStore = new TestInMemorySignalProtocolStore();
-    SignalProtocolStore bobStore   = new TestInMemorySignalProtocolStore();
+    SignalProtocolStore aliceStore = new TestInMemoryRDMStore();
+    SignalProtocolStore bobStore   = new TestInMemoryRDMStore();
 
     PreKeyBundle alicePreKeyBundle = createAlicePreKeyBundle(aliceStore);
     PreKeyBundle bobPreKeyBundle = createBobPreKeyBundle(bobStore);
@@ -138,8 +138,8 @@ public class SimultaneousInitiateTests extends TestCase {
       InvalidMessageException, DuplicateMessageException, LegacyMessageException,
       InvalidKeyIdException, NoSessionException
   {
-    SignalProtocolStore aliceStore = new TestInMemorySignalProtocolStore();
-    SignalProtocolStore bobStore   = new TestInMemorySignalProtocolStore();
+    SignalProtocolStore aliceStore = new TestInMemoryRDMStore();
+    SignalProtocolStore bobStore   = new TestInMemoryRDMStore();
 
     PreKeyBundle alicePreKeyBundle = createAlicePreKeyBundle(aliceStore);
     PreKeyBundle bobPreKeyBundle = createBobPreKeyBundle(bobStore);
@@ -197,8 +197,8 @@ public class SimultaneousInitiateTests extends TestCase {
       InvalidMessageException, DuplicateMessageException, LegacyMessageException,
       InvalidKeyIdException, NoSessionException
   {
-    SignalProtocolStore aliceStore = new TestInMemorySignalProtocolStore();
-    SignalProtocolStore bobStore   = new TestInMemorySignalProtocolStore();
+    SignalProtocolStore aliceStore = new TestInMemoryRDMStore();
+    SignalProtocolStore bobStore   = new TestInMemoryRDMStore();
 
     PreKeyBundle alicePreKeyBundle = createAlicePreKeyBundle(aliceStore);
     PreKeyBundle bobPreKeyBundle = createBobPreKeyBundle(bobStore);
@@ -273,8 +273,8 @@ public class SimultaneousInitiateTests extends TestCase {
       InvalidMessageException, DuplicateMessageException, LegacyMessageException,
       InvalidKeyIdException, NoSessionException
   {
-    SignalProtocolStore aliceStore = new TestInMemorySignalProtocolStore();
-    SignalProtocolStore bobStore   = new TestInMemorySignalProtocolStore();
+    SignalProtocolStore aliceStore = new TestInMemoryRDMStore();
+    SignalProtocolStore bobStore   = new TestInMemoryRDMStore();
 
 
     SessionBuilder aliceSessionBuilder = new SessionBuilder(aliceStore, BOB_ADDRESS);
@@ -352,8 +352,8 @@ public class SimultaneousInitiateTests extends TestCase {
       InvalidMessageException, DuplicateMessageException, LegacyMessageException,
       InvalidKeyIdException, NoSessionException
   {
-    SignalProtocolStore aliceStore = new TestInMemorySignalProtocolStore();
-    SignalProtocolStore bobStore   = new TestInMemorySignalProtocolStore();
+    SignalProtocolStore aliceStore = new TestInMemoryRDMStore();
+    SignalProtocolStore bobStore   = new TestInMemoryRDMStore();
 
 
     SessionBuilder aliceSessionBuilder = new SessionBuilder(aliceStore, BOB_ADDRESS);

@@ -108,18 +108,33 @@ public class SessionRecord {
    * @return a serialized version of the current SessionRecord.
    */
   public byte[] serialize() {
+    RecordStructure record = getRecordStructure();
+    return record.toByteArray();
+  }
+
+
+  public RecordStructure getRecordStructure() {
     List<SessionStructure> previousStructures = new LinkedList<>();
 
     for (SessionState previousState : previousStates) {
       previousStructures.add(previousState.getStructure());
     }
 
-    RecordStructure record = RecordStructure.newBuilder()
+    return RecordStructure.newBuilder()
                                             .setCurrentSession(sessionState.getStructure())
                                             .addAllPreviousSessions(previousStructures)
                                             .build();
+  }
 
-    return record.toByteArray();
+
+  public void rdmFilterAllStates() {
+    this.sessionState.rdmFilter();
+    this.previousStates = new LinkedList<>();
+  }
+
+  public void signalFilterAllStates() {
+    this.sessionState.signalFilter();
+    this.previousStates = new LinkedList<>();
   }
 
 }

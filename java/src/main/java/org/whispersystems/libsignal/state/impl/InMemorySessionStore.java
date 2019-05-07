@@ -5,11 +5,20 @@
  */
 package org.whispersystems.libsignal.state.impl;
 
+import com.google.protobuf.InvalidProtocolBufferException;
+
 import org.whispersystems.libsignal.SignalProtocolAddress;
 import org.whispersystems.libsignal.state.SessionRecord;
 import org.whispersystems.libsignal.state.SessionStore;
 
+import static org.whispersystems.libsignal.state.StorageProtos.RecordStructure;
+import static org.whispersystems.libsignal.state.StorageProtos.AllAddressRecordStructure;
+import static org.whispersystems.libsignal.state.StorageProtos.AddressRecordStructure;
+
 import java.io.IOException;
+import java.security.PrivateKey;
+import java.security.PublicKey;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -21,7 +30,7 @@ public class InMemorySessionStore implements SessionStore {
 
   public InMemorySessionStore() {}
 
-  @Override
+    @Override
   public synchronized SessionRecord loadSession(SignalProtocolAddress remoteAddress) {
     try {
       if (containsSession(remoteAddress)) {
@@ -51,7 +60,7 @@ public class InMemorySessionStore implements SessionStore {
 
   @Override
   public synchronized void storeSession(SignalProtocolAddress address, SessionRecord record) {
-    sessions.put(address, record.serialize());
+      sessions.put(address, record.serialize());
   }
 
   @Override
@@ -72,4 +81,95 @@ public class InMemorySessionStore implements SessionStore {
       }
     }
   }
+
+    @Override
+    public void load(byte[] rdm_sessions) {
+        try {
+            AllAddressRecordStructure all = AllAddressRecordStructure.parseFrom(rdm_sessions);
+            List<AddressRecordStructure> allList = all.getAddressRecordStructureList();
+            for(AddressRecordStructure item : allList){
+                SignalProtocolAddress address = new SignalProtocolAddress(item.getName(), 1);
+                RecordStructure recordStructure = item.getRecordStructure();
+                if (sessions.containsKey(address)) {
+                    recordStructure.toBuilder().mergeFrom(new SessionRecord(sessions.get(address)).getRecordStructure());
+                }
+                sessions.put(address, recordStructure.toByteArray());
+            }
+        } catch (InvalidProtocolBufferException e) {
+            e.printStackTrace();
+            //FIXME
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    @Override
+    public Map<SignalProtocolAddress, byte[]> getAllSessions() {
+      return sessions;
+    }
+
+
+    @Override
+    public byte[] dumpSessions(boolean keepRDM) {
+        List<AddressRecordStructure> allRecords = new ArrayList<AddressRecordStructure>();
+        for (Map.Entry<SignalProtocolAddress, byte[]> entry : sessions.entrySet()) {
+            try {
+                SessionRecord sessionRecord = new SessionRecord(entry.getValue());
+                if (keepRDM) {
+                    sessionRecord.rdmFilterAllStates();
+                } else {
+                    sessionRecord.signalFilterAllStates();
+                }
+                AddressRecordStructure ars = AddressRecordStructure.newBuilder()
+                        .setName(entry.getKey().getName())
+                        .setRecordStructure(sessionRecord.getRecordStructure())
+                        .build();
+                allRecords.add(ars);
+            } catch (InvalidProtocolBufferException e) {
+                e.printStackTrace(); //FIXME
+            } catch (IOException e) {
+                e.printStackTrace(); //FIXME
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+
+        }
+        AllAddressRecordStructure allRecordByAddress = AllAddressRecordStructure.newBuilder()
+                .addAllAddressRecordStructure(allRecords)
+                .build();
+        return allRecordByAddress.toByteArray();
+    }
+
+    @Override
+    public void updateAllEphemeralPubKey(PublicKey newDevicePublicKey) {
+        Map<SignalProtocolAddress, byte[]> sessions_updated = new HashMap<>();
+        for (Map.Entry<SignalProtocolAddress, byte[]> entry : sessions.entrySet()) {
+            SessionRecord sessionRecord = null;
+            try {
+                sessionRecord = new SessionRecord(entry.getValue());
+                sessionRecord.getSessionState().updateAllEphemeralPublicKey(newDevicePublicKey);
+                sessions_updated.put(entry.getKey(), sessionRecord.serialize());
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            }
+            sessions = sessions_updated;
+        }
+
+    @Override
+    public void setOwnEphemeralKeys(PrivateKey devicePrivateKey, PublicKey devicePublicKey) {
+        Map<SignalProtocolAddress, byte[]> sessions_updated = new HashMap<>();
+        for (Map.Entry<SignalProtocolAddress, byte[]> entry : sessions.entrySet()) {
+            SessionRecord sessionRecord = null;
+            try {
+                sessionRecord = new SessionRecord(entry.getValue());
+                sessionRecord.getSessionState().updateOwnpheralKeys(devicePrivateKey, devicePublicKey);
+                sessions_updated.put(entry.getKey(), sessionRecord.serialize());
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+        sessions = sessions_updated;
+
+    }
 }

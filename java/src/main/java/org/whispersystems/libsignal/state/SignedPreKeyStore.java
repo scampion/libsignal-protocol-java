@@ -49,4 +49,6 @@ public interface SignedPreKeyStore {
    */
   public void         removeSignedPreKey(int signedPreKeyId);
 
+
+  public List<StorageProtos.SignedPreKeyRecordStructure> dumpSignedPreKey();
 }

@@ -1,3 +1,5 @@
+syntax = "proto2";
+
 package textsecure;
 
 option java_package = "org.whispersystems.libsignal.state";
@@ -59,11 +61,31 @@ message SessionStructure {
 
     optional bool needsRefresh = 12;
     optional bytes aliceBaseKey = 13;
+
+    message RatchetDynamicMulticastStructure {
+        optional bytes ownEphemeralPublicKey     = 1;
+        optional bytes ownEphemeralSecretKey     = 2;
+        repeated bytes allEphemeralPublicKey     = 3;
+        optional bytes macKey                    = 4;
+    }
+
+    optional bytes receiverRootKey = 14;
+    optional RatchetDynamicMulticastStructure ratchetDynamicMulticastStructure = 15;
 }
 
 message RecordStructure {
     optional SessionStructure currentSession   = 1;
     repeated SessionStructure previousSessions = 2;
+}
+
+
+message AddressRecordStructure {
+    optional string name     = 1;
+    optional RecordStructure recordStructure = 2;
+}
+
+message AllAddressRecordStructure {
+    repeated AddressRecordStructure addressRecordStructure = 1;
 }
 
 message PreKeyRecordStructure {
@@ -79,6 +101,50 @@ message SignedPreKeyRecordStructure {
     optional bytes   signature  = 4;
     optional fixed64 timestamp  = 5;
 }
+
+
+message RatchetDynamicMulticastDeviceKeyPairStructure {
+    optional bytes publicKey  = 1;
+    optional bytes privateKey = 2;
+}
+
+message RatchetDynamicMulticastMessageEncAddJoinStructure {
+     optional bytes session                             = 1;
+     optional bytes ownIdentityKeyPair                  = 2;
+     optional bytes theirIdentityKeyPair                = 3;
+     repeated SignedPreKeyRecordStructure signed_prekey = 4;
+     repeated bytes allDevicePublicKey                  = 5;
+}
+
+message RatchetDynamicMulticastMessageStructure {
+    optional bytes secretRatchetKey                    = 1;
+    optional bytes publicRatchetKey                    = 2;
+    optional bytes text                                = 3;
+}
+
+message RatchetDynamicMulticastMessageRevokeStructure {
+     optional bytes secretRatchetKey                    = 1;
+}
+
+//message RatchetDynamicMulticastTagStructure {
+//    optional bytes macKey                      = 1;
+//    repeated bytes allEphemeralPublicKey       = 2;
+//}
+
+//en fait pourrait se servir du EncStructure.
+message RatchetDynamicMulticastAddStructure {
+    optional bytes macKey                      = 1;
+    optional bytes tag                         = 2;
+}
+
+message RatchetDynamicMulticastEncStructure {
+    optional RatchetDynamicMulticastMessageStructure        message        = 1;
+    optional RatchetDynamicMulticastMessageEncAddJoinStructure    join_message   = 2;
+    optional RatchetDynamicMulticastMessageRevokeStructure  revoke_message = 3;
+    optional bytes  macKey                                                 = 4;
+    optional bytes  tag                                                    = 5;
+}
+
 
 message IdentityKeyPairStructure {
     optional bytes publicKey  = 1;

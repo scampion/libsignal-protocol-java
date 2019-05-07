@@ -1,13 +1,10 @@
 package org.whispersystems.libsignal.fingerprint;
 
-import android.util.Log;
-
 import junit.framework.TestCase;
 
 import org.whispersystems.libsignal.IdentityKey;
 import org.whispersystems.libsignal.ecc.Curve;
 import org.whispersystems.libsignal.ecc.ECKeyPair;
-import org.whispersystems.libsignal.util.Hex;
 
 import java.util.Arrays;
 
