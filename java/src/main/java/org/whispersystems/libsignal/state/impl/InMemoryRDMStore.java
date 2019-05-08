@@ -130,6 +130,9 @@ public class InMemoryRDMStore extends InMemorySignalProtocolStore implements RDM
 
 
             // build enc_add_join_msg
+            //ajout celine
+            sessionRecord.signalFilterAllStates();
+            //fin ajout Céline
             StorageProtos.RatchetDynamicMulticastMessageEncAddJoinStructure enc_add_join_msg;
             enc_add_join_msg = StorageProtos.RatchetDynamicMulticastMessageEncAddJoinStructure.newBuilder()
                     .setSession(ByteString.copyFrom(sessionRecord.serialize()))
@@ -141,7 +144,7 @@ public class InMemoryRDMStore extends InMemorySignalProtocolStore implements RDM
 
 
             // build RDM enc message
-            sessionRecord.signalFilterAllStates();
+     //       sessionRecord.signalFilterAllStates();
             StorageProtos.RatchetDynamicMulticastEncStructure rdmm;
             rdmm = StorageProtos.RatchetDynamicMulticastEncStructure.newBuilder()
                     .setJoinMessage(enc_add_join_msg)
@@ -221,6 +224,13 @@ public class InMemoryRDMStore extends InMemorySignalProtocolStore implements RDM
                 byte[] tag = rdmenc.getTag().toByteArray();
                 ByteString new_mac_key = rdmenc.getMacKey();
                 verifyMac(msg, currentSessionRecord, tag, new_mac_key);
+
+                //ajoutCeline
+                StorageProtos.SessionStructure.RatchetDynamicMulticastStructure rdms;
+                rdms = currentSessionRecord.getSessionState().getStructure().getRatchetDynamicMulticastStructure();
+                sessionRecord.getSessionState().setRatchetDynamicMulticastStructure(rdms);
+                //fin ajout
+
                 storeSession(ad, sessionRecord);
                 // setup own identity key
                 ByteString ownIdentityKeyPair = rdmenc.getJoinMessage().getOwnIdentityKeyPair();
@@ -448,6 +458,14 @@ public class InMemoryRDMStore extends InMemorySignalProtocolStore implements RDM
                     sessionRecord.getSessionState().setSenderChain(ourNewSigEphemeralKeyPair, chain.second());
 
                 }
+
+                //ajout Celine
+                //fait même maj des chain key/message key que celui qui fait le encrypt Signal
+                ChainKey chainKey = sessionRecord.getSessionState().getSenderChainKey();
+                sessionRecord.getSessionState().setSenderChainKey(chainKey.getNextChainKey());//FIXME c'est la le pb, n'enregistre pas l'avancée de l'index des chain key!
+              //  System.out.println("fin dec2, chainkey index =" +  sessionRecord.getSessionState().getSenderChainKey().getIndex());
+                //fin ajout Céline
+
                 storeSession(ad, sessionRecord);
 
                 return message.getText().toByteArray();

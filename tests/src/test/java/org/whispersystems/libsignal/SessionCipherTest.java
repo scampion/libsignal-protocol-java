@@ -219,31 +219,30 @@ public class SessionCipherTest extends TestCase {
         RDMStore bobStore = new TestInMemoryRDMStore();
 
         SignalProtocolAddress bob_ad = new SignalProtocolAddress("+14159999999", 1);
+        SignalProtocolAddress alice_ad = new SignalProtocolAddress("+14158888888", 1);
+
         aliceStore.storeSession(bob_ad, aliceSessionRecord);
-        bobStore.storeSession(new SignalProtocolAddress("+14158888888", 1), bobSessionRecord);
+        bobStore.storeSession(alice_ad, bobSessionRecord);
 
         SessionCipher aliceCipher = new SessionCipher(aliceStore, bob_ad);
-        SessionCipher bobCipher = new SessionCipher(bobStore, new SignalProtocolAddress("+14158888888", 1));
+        SessionCipher bobCipher = new SessionCipher(bobStore, alice_ad);
 
+        //1. Alice envoie un message, Bob répond
         byte[] alicePlaintext = "Hello Bob !".getBytes();
         CiphertextMessage message = aliceCipher.encrypt(alicePlaintext);
         byte[] bobPlaintext = bobCipher.decrypt(new SignalMessage(message.serialize()));
-
         assertTrue(Arrays.equals(alicePlaintext, bobPlaintext));
         System.out.println(new String(bobPlaintext));
 
         byte[] bobReply = "Hi Alice !".getBytes();
         CiphertextMessage reply = bobCipher.encrypt(bobReply);
         byte[] receivedReply = aliceCipher.decrypt(new SignalMessage(reply.serialize()));
-
         System.out.println(new String(receivedReply));
-
         assertTrue(Arrays.equals(bobReply, receivedReply));
 
         RDMStore aliceStoreNewDevice = new TestInMemoryRDMStore();
 
-        // ajout du nouveau device
-
+        //2. ajout du nouveau device
         ArrayList<byte[]> messages = aliceStore.addjoin(aliceStoreNewDevice.getDevicePublicKey());
         aliceStoreNewDevice.decJoin(messages);
 
@@ -254,43 +253,39 @@ public class SessionCipherTest extends TestCase {
         aliceCipher.half_ratchet(sessionState);
         message = aliceCipher.encrypt(new byte[0]);
         bobCipher.decrypt(new SignalMessage(message.serialize()));
-
-
         // NB pour chaque session il faut envoyer un msg enc_add_join a chaque device
         byte[] msg = aliceStore.enc_add_join(bob_ad);
         aliceStoreNewDevice.dec_add_join(msg);
 
-        // Test if bob reply can be read by both devices
+        //3. Test if bob reply can be read by both devices
         byte[] bobReplyB = "How are you ?".getBytes();
         CiphertextMessage replyB = bobCipher.encrypt(bobReplyB);
         byte[] rr = aliceCipher.decrypt(new SignalMessage(replyB.serialize()));
-
         SessionCipher aliceCipherNewDevice = new SessionCipher(aliceStoreNewDevice, bob_ad);
         byte[] rr_nd = aliceCipherNewDevice.decrypt(new SignalMessage(replyB.serialize()));
-
         System.out.println(new String(rr));
         System.out.println(new String(rr_nd));
 
-        //Alice envoie un message à Bob depuis son nouveau device
+        //4.Alice envoie un message à Bob depuis son nouveau device
         byte[] aliceNewDeviceReplyC = "Fine, I test my new device".getBytes();
         CiphertextMessage replyC = aliceCipherNewDevice.encrypt(aliceNewDeviceReplyC);
-
         //alice new device envoie le RDM message à l'ancien device
         msg =  aliceStoreNewDevice.enc(bob_ad, aliceNewDeviceReplyC);
         byte[] rec_msg = aliceStore.dec(msg);
-        System.out.println("recu par l'ancien device: "+ new String(rec_msg));
 
+        System.out.println("recu par l'ancien device: "+ new String(rec_msg));
+        //Bob recoit le message
         byte[] readC = bobCipher.decrypt(new SignalMessage(replyC.serialize()));
         System.out.println("Ce que Bob à reçu :"+ new String(readC));
-        //
+
+        //5. Bob répond
         byte[] bobReplyC = "How are you Alice ?".getBytes();
         CiphertextMessage bobreplyC = bobCipher.encrypt(bobReplyC);
         System.out.println(" received by new device from bob :" + new String(aliceCipherNewDevice.decrypt(new SignalMessage(bobreplyC.serialize()))));
         System.out.println(" received by first device from bob :" + new String(aliceCipher.decrypt(new SignalMessage(bobreplyC.serialize()))));
 
-        // Test d'un troisième device d'Alice
+        //6. Test d'un troisième device d'Alice
         RDMStore aliceStoreNewDevice2 = new TestInMemoryRDMStore();
-
         // ajout du nouveau device
         messages = aliceStore.addjoin(aliceStoreNewDevice2.getDevicePublicKey());
         aliceStoreNewDevice2.decJoin(messages);
@@ -302,31 +297,49 @@ public class SessionCipherTest extends TestCase {
         aliceCipher.half_ratchet(sessionState);
         message = aliceCipher.encrypt(new byte[0]);
         bobCipher.decrypt(new SignalMessage(message.serialize()));
-
-
-        // TODO pour chaque session envoyer un msg enc au nouveau device
         msg = aliceStore.enc_add_join(bob_ad);
         aliceStoreNewDevice2.dec_add_join(msg);
-        System.out.println("sort du enc_add_join pour AliceNewDevice2");
         aliceStoreNewDevice.dec_add_join(msg);
-        System.out.println("sort du enc_add_join pour AliceNewDevice");
 
-        // test si le troisieme device peut envoyer un message
+        //7. test si le troisieme device peut envoyer un message
         SessionCipher aliceCipherNewDevice2 = new SessionCipher(aliceStoreNewDevice2, bob_ad);
         byte[] aliceNewDeviceReplyD = "Fine, I test my new device 3".getBytes();
         CiphertextMessage replyD = aliceCipherNewDevice2.encrypt(aliceNewDeviceReplyD);
-
         msg =  aliceStoreNewDevice2.enc(bob_ad, aliceNewDeviceReplyD);
-        byte[] rec_msg_1 = aliceStore.dec(msg);
-        byte[] rec_msg_2 = aliceStoreNewDevice.dec(msg);
-        System.out.println("recu par l'ancien device: "+ new String(rec_msg_1));
-        System.out.println("recu par l'ancien new device: "+ new String(rec_msg_2));
+        //les autres devices et Bob recçoivent
+        byte[] rec_msgD_1 = aliceStore.dec(msg);
+        byte[] rec_msgD_2 = aliceStoreNewDevice.dec(msg);
+        SessionRecord srtest1= aliceStore.loadSession(bob_ad);
+        System.out.println("index de chain key après dec = "+ srtest1.getSessionState().getSenderChainKey().getIndex());
 
-
+        System.out.println("recu par l'ancien device: "+ new String(rec_msgD_1));
+        System.out.println("recu par l'ancien new device: "+ new String(rec_msgD_2));
         byte[] readD = bobCipher.decrypt(new SignalMessage(replyD.serialize()));
         System.out.println("Ce que Bob à reçu :"+ new String(readD));
 
+        //8. Le troisième device renvoie un message
+        byte[] aliceNewDeviceReplyE = "and it seems it works fine".getBytes();
+        CiphertextMessage replyE = aliceCipherNewDevice2.encrypt(aliceNewDeviceReplyE);
+        //les autres devices et Bob recçoivent
+        msg =  aliceStoreNewDevice2.enc(bob_ad, aliceNewDeviceReplyE);
+        byte[] rec_msgE_1 = aliceStore.dec(msg);
+        byte[] rec_msgE_2 = aliceStoreNewDevice.dec(msg);
+        System.out.println("recu par l'ancien device: "+ new String(rec_msgE_1));
+        System.out.println("recu par l'ancien new device: "+ new String(rec_msgE_2));
+        byte[] readE = bobCipher.decrypt(new SignalMessage(replyE.serialize()));
+        System.out.println("Ce que Bob à reçu :"+ new String(readE));
 
+        //9. Le premier device envoie un message
+        byte[] aliceReplyF = "so how do you do?".getBytes();
+        CiphertextMessage replyF = aliceCipher.encrypt(aliceReplyF);
+        //les autres devices et Bob recçoivent
+        msg =  aliceStore.enc(bob_ad, aliceReplyF);
+        byte[] rec_msgF_1 = aliceStoreNewDevice.dec(msg);
+        byte[] rec_msgF_2 = aliceStoreNewDevice2.dec(msg);
+        System.out.println("recu par new device: "+ new String(rec_msgF_1));
+        System.out.println("recu par new device2: "+ new String(rec_msgF_2));
+        byte[] readF = bobCipher.decrypt(new SignalMessage(replyF.serialize()));
+        System.out.println("Ce que Bob à reçu :"+ new String(readF));
 
     }
 
