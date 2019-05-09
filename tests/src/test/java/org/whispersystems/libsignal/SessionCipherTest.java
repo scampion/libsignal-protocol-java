@@ -15,6 +15,7 @@ import org.whispersystems.libsignal.ratchet.RatchetingSession;
 import org.whispersystems.libsignal.state.SignalProtocolStore;
 import org.whispersystems.libsignal.state.SessionRecord;
 import org.whispersystems.libsignal.state.SessionState;
+import org.whispersystems.libsignal.util.Pair;
 import org.whispersystems.libsignal.util.guava.Optional;
 
 import java.io.IOException;
@@ -309,8 +310,7 @@ public class SessionCipherTest extends TestCase {
         //les autres devices et Bob recçoivent
         byte[] rec_msgD_1 = aliceStore.dec(msg);
         byte[] rec_msgD_2 = aliceStoreNewDevice.dec(msg);
-        SessionRecord srtest1= aliceStore.loadSession(bob_ad);
-        System.out.println("index de chain key après dec = "+ srtest1.getSessionState().getSenderChainKey().getIndex());
+        System.out.println("index de chain key après dec = "+ aliceStore.loadSession(bob_ad).getSessionState().getSenderChainKey().getIndex());
 
         System.out.println("recu par l'ancien device: "+ new String(rec_msgD_1));
         System.out.println("recu par l'ancien new device: "+ new String(rec_msgD_2));
@@ -322,7 +322,9 @@ public class SessionCipherTest extends TestCase {
         CiphertextMessage replyE = aliceCipherNewDevice2.encrypt(aliceNewDeviceReplyE);
         //les autres devices et Bob recçoivent
         msg =  aliceStoreNewDevice2.enc(bob_ad, aliceNewDeviceReplyE);
+        System.out.println("INDEX entree de dec : " + aliceStore.loadSession(bob_ad).getSessionState().getSenderChainKey().getIndex());
         byte[] rec_msgE_1 = aliceStore.dec(msg);
+        System.out.println("INDEX sortie de dec : " + aliceStore.loadSession(bob_ad).getSessionState().getSenderChainKey().getIndex());
         byte[] rec_msgE_2 = aliceStoreNewDevice.dec(msg);
         System.out.println("recu par l'ancien device: "+ new String(rec_msgE_1));
         System.out.println("recu par l'ancien new device: "+ new String(rec_msgE_2));
@@ -464,22 +466,37 @@ public class SessionCipherTest extends TestCase {
         System.out.println("Ce que Bob à reçu :"+ new String(readD));
 
 
-        List<SessionCipher> aliceCiphers = Arrays.<SessionCipher>asList(aliceCipher, aliceCipherNewDevice, aliceCipherNewDevice2);
-        for(int i = 0; i < 100; i++){
+        Pair<SessionCipher, RDMStore> d1 = new Pair<>(aliceCipher, aliceStore);
+        Pair<SessionCipher, RDMStore> d2 = new Pair<>(aliceCipherNewDevice, aliceStoreNewDevice);
+        Pair<SessionCipher, RDMStore> d3 = new Pair<>(aliceCipherNewDevice2, aliceStoreNewDevice2);
+        List<Pair<SessionCipher, RDMStore>> devices = Arrays.asList(d1, d2, d3);
+        for(int i = 0; i < 10000; i++){
             String uuid = UUID.randomUUID().toString();
             Random rand = new Random();
-            int index = rand.nextInt(aliceCiphers.size());
-            SessionCipher randomAliceCipher = aliceCiphers.get(index);
+            int index = rand.nextInt(devices.size());
+            SessionCipher randomAliceCipher = devices.get(index).first();
+            RDMStore randomAliceStore = devices.get(index).second();
             msg = uuid.getBytes();
             System.out.println("using alice cipher "+ index + " - message: " + i + " : " + uuid);
             reply = randomAliceCipher.encrypt(msg);
+            byte[] enc = randomAliceStore.enc(bob_ad, msg);
+            for(int j = 0; j < devices.size(); j++){
+                if (j != index) {
+                    devices.get(j).second().dec(enc);
+                }
+            }
+
             byte[] read = bobCipher.decrypt(new SignalMessage(reply.serialize()));
             assertTrue(Arrays.equals(msg, read));
             String s = new String(read) + i;
             CiphertextMessage bobreply = bobCipher.encrypt(s.getBytes());
-            randomAliceCipher = aliceCiphers.get(rand.nextInt(aliceCiphers.size()));
-            byte[] ans = randomAliceCipher.decrypt(new SignalMessage(bobreply.serialize()));
-            assertTrue(Arrays.equals(s.getBytes(), ans));
+
+            for(int j = 0; j < devices.size(); j++){
+                SessionCipher cipher = devices.get(j).first();
+                byte[] ans = cipher.decrypt(new SignalMessage(bobreply.serialize()));
+                System.out.println(j + " " + new String(ans) );
+                assertTrue(Arrays.equals(s.getBytes(), ans));
+            }
         }
     }
 

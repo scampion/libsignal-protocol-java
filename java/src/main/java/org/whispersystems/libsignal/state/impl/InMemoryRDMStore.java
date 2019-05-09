@@ -220,7 +220,6 @@ public class InMemoryRDMStore extends InMemorySignalProtocolStore implements RDM
                 StorageProtos.RatchetDynamicMulticastEncStructure rdmenc;
                 rdmenc = StorageProtos.RatchetDynamicMulticastEncStructure.parseFrom(bytes);
                 SessionRecord sessionRecord = new SessionRecord(rdmenc.getJoinMessage().getSession().toByteArray());
-                List<ByteString> allEphemeralPublicKey = msg.getPublicKeyList();
                 byte[] tag = rdmenc.getTag().toByteArray();
                 ByteString new_mac_key = rdmenc.getMacKey();
                 verifyMac(msg, currentSessionRecord, tag, new_mac_key);
@@ -323,6 +322,7 @@ public class InMemoryRDMStore extends InMemorySignalProtocolStore implements RDM
             List<ByteString> allEphemeralPublicKeyList = ephemaralUpdater.getAllEphemeralPublicKeyList();
             byte[] tag = ephemaralUpdater.getTag();
 
+            System.out.println(bytesToHex(sr.getSessionState().getLatestRatchetKeyPrivate()));
             // build message
             StorageProtos.RatchetDynamicMulticastMessageStructure txtmsg = StorageProtos.RatchetDynamicMulticastMessageStructure.newBuilder()
                     .setText(ByteString.copyFrom(text))
@@ -445,10 +445,12 @@ public class InMemoryRDMStore extends InMemorySignalProtocolStore implements RDM
                 ECPrivateKey ourNewSigEphemeralPrivate = Curve.decodePrivatePoint(secSigEphemeral.toByteArray());
                 ECPublicKey ourNewSigEphemeralPublic = Curve.decodePoint(pubSigEphemeral.toByteArray(), 0);
 
+                boolean equalsPriv = Arrays.equals(secSigEphemeral.toByteArray(), sessionRecord.getSessionState().getLatestRatchetKeyPrivate());
+                boolean equalsPub = ourNewSigEphemeralPublic.equals(sessionRecord.getSessionState().getSenderRatchetKey());
+
                 //recompose une KeyPair
                 ECKeyPair ourNewSigEphemeralKeyPair = new ECKeyPair(ourNewSigEphemeralPublic, ourNewSigEphemeralPrivate);
-
-                if (ourNewSigEphemeralKeyPair.equals(sessionRecord.getSessionState().getSenderRatchetKeyPair())==false) {
+                if (!equalsPriv || !equalsPub) {
                     RootKey rootKey = sessionRecord.getSessionState().getReceiverRootKey();//FIXME recuperer aussi cle publique
                     ECPublicKey theirSigEphemeral = sessionRecord.getSessionState().getLatestReceiverRatchetKey();
                     Pair<RootKey, ChainKey> chain = rootKey.createChain(theirSigEphemeral, ourNewSigEphemeralKeyPair);
@@ -461,9 +463,11 @@ public class InMemoryRDMStore extends InMemorySignalProtocolStore implements RDM
 
                 //ajout Celine
                 //fait même maj des chain key/message key que celui qui fait le encrypt Signal
+                System.out.println("deb dec2, chainkey index =" +  sessionRecord.getSessionState().getSenderChainKey().getIndex());
                 ChainKey chainKey = sessionRecord.getSessionState().getSenderChainKey();
+//                sessionRecord.getSessionState().setSenderChainKey(chainKey.getNextChainKey());//FIXME c'est la le pb, n'enregistre pas l'avancée de l'index des chain key!
                 sessionRecord.getSessionState().setSenderChainKey(chainKey.getNextChainKey());//FIXME c'est la le pb, n'enregistre pas l'avancée de l'index des chain key!
-              //  System.out.println("fin dec2, chainkey index =" +  sessionRecord.getSessionState().getSenderChainKey().getIndex());
+                 System.out.println("fin dec2, chainkey index =" +  sessionRecord.getSessionState().getSenderChainKey().getIndex());
                 //fin ajout Céline
 
                 storeSession(ad, sessionRecord);
