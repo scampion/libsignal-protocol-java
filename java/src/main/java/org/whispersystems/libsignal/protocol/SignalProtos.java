@@ -4604,15 +4604,15 @@ public final class SignalProtos {
   }
 
   public interface RatchetedDynamicMulticastMessageOrBuilder extends
-      // @@protoc_insertion_point(interface_extends:textsecure.InMemoryRDMStore)
+      // @@protoc_insertion_point(interface_extends:textsecure.RatchetedDynamicMulticastMessage)
       com.google.protobuf.MessageOrBuilder {
 
     /**
-     * <code>optional .textsecure.InMemoryRDMStore.Action action = 1;</code>
+     * <code>optional .textsecure.RatchetedDynamicMulticastMessage.Action action = 1;</code>
      */
     boolean hasAction();
     /**
-     * <code>optional .textsecure.InMemoryRDMStore.Action action = 1;</code>
+     * <code>optional .textsecure.RatchetedDynamicMulticastMessage.Action action = 1;</code>
      */
     org.whispersystems.libsignal.protocol.SignalProtos.RatchetedDynamicMulticastMessage.Action getAction();
 
@@ -4688,13 +4688,13 @@ public final class SignalProtos {
     com.google.protobuf.ByteString getRDMEncryptedAddStructure(int index);
   }
   /**
-   * Protobuf type {@code textsecure.InMemoryRDMStore}
+   * Protobuf type {@code textsecure.RatchetedDynamicMulticastMessage}
    */
   public  static final class RatchetedDynamicMulticastMessage extends
       com.google.protobuf.GeneratedMessageV3 implements
-      // @@protoc_insertion_point(message_implements:textsecure.InMemoryRDMStore)
+      // @@protoc_insertion_point(message_implements:textsecure.RatchetedDynamicMulticastMessage)
       RatchetedDynamicMulticastMessageOrBuilder {
-    // Use InMemoryRDMStore.newBuilder() to construct.
+    // Use RatchetedDynamicMulticastMessage.newBuilder() to construct.
     private RatchetedDynamicMulticastMessage(com.google.protobuf.GeneratedMessageV3.Builder<?> builder) {
       super(builder);
     }
@@ -4821,7 +4821,7 @@ public final class SignalProtos {
     }
 
     /**
-     * Protobuf enum {@code textsecure.InMemoryRDMStore.Action}
+     * Protobuf enum {@code textsecure.RatchetedDynamicMulticastMessage.Action}
      */
     public enum Action
         implements com.google.protobuf.ProtocolMessageEnum {
@@ -4934,20 +4934,20 @@ public final class SignalProtos {
         this.value = value;
       }
 
-      // @@protoc_insertion_point(enum_scope:textsecure.InMemoryRDMStore.Action)
+      // @@protoc_insertion_point(enum_scope:textsecure.RatchetedDynamicMulticastMessage.Action)
     }
 
     private int bitField0_;
     public static final int ACTION_FIELD_NUMBER = 1;
     private int action_;
     /**
-     * <code>optional .textsecure.InMemoryRDMStore.Action action = 1;</code>
+     * <code>optional .textsecure.RatchetedDynamicMulticastMessage.Action action = 1;</code>
      */
     public boolean hasAction() {
       return ((bitField0_ & 0x00000001) == 0x00000001);
     }
     /**
-     * <code>optional .textsecure.InMemoryRDMStore.Action action = 1;</code>
+     * <code>optional .textsecure.RatchetedDynamicMulticastMessage.Action action = 1;</code>
      */
     public org.whispersystems.libsignal.protocol.SignalProtos.RatchetedDynamicMulticastMessage.Action getAction() {
       org.whispersystems.libsignal.protocol.SignalProtos.RatchetedDynamicMulticastMessage.Action result = org.whispersystems.libsignal.protocol.SignalProtos.RatchetedDynamicMulticastMessage.Action.valueOf(action_);
@@ -5350,11 +5350,11 @@ public final class SignalProtos {
       return builder;
     }
     /**
-     * Protobuf type {@code textsecure.InMemoryRDMStore}
+     * Protobuf type {@code textsecure.RatchetedDynamicMulticastMessage}
      */
     public static final class Builder extends
         com.google.protobuf.GeneratedMessageV3.Builder<Builder> implements
-        // @@protoc_insertion_point(builder_implements:textsecure.InMemoryRDMStore)
+        // @@protoc_insertion_point(builder_implements:textsecure.RatchetedDynamicMulticastMessage)
         org.whispersystems.libsignal.protocol.SignalProtos.RatchetedDynamicMulticastMessageOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
           getDescriptor() {
@@ -5368,7 +5368,7 @@ public final class SignalProtos {
                 org.whispersystems.libsignal.protocol.SignalProtos.RatchetedDynamicMulticastMessage.class, org.whispersystems.libsignal.protocol.SignalProtos.RatchetedDynamicMulticastMessage.Builder.class);
       }
 
-      // Construct using org.whispersystems.libsignal.protocol.SignalProtos.InMemoryRDMStore.newBuilder()
+      // Construct using org.whispersystems.libsignal.protocol.SignalProtos.RatchetedDynamicMulticastMessage.newBuilder()
       private Builder() {
         maybeForceBuilderInitialization();
       }
@@ -5570,20 +5570,20 @@ public final class SignalProtos {
 
       private int action_ = 0;
       /**
-       * <code>optional .textsecure.InMemoryRDMStore.Action action = 1;</code>
+       * <code>optional .textsecure.RatchetedDynamicMulticastMessage.Action action = 1;</code>
        */
       public boolean hasAction() {
         return ((bitField0_ & 0x00000001) == 0x00000001);
       }
       /**
-       * <code>optional .textsecure.InMemoryRDMStore.Action action = 1;</code>
+       * <code>optional .textsecure.RatchetedDynamicMulticastMessage.Action action = 1;</code>
        */
       public org.whispersystems.libsignal.protocol.SignalProtos.RatchetedDynamicMulticastMessage.Action getAction() {
         org.whispersystems.libsignal.protocol.SignalProtos.RatchetedDynamicMulticastMessage.Action result = org.whispersystems.libsignal.protocol.SignalProtos.RatchetedDynamicMulticastMessage.Action.valueOf(action_);
         return result == null ? org.whispersystems.libsignal.protocol.SignalProtos.RatchetedDynamicMulticastMessage.Action.JOIN : result;
       }
       /**
-       * <code>optional .textsecure.InMemoryRDMStore.Action action = 1;</code>
+       * <code>optional .textsecure.RatchetedDynamicMulticastMessage.Action action = 1;</code>
        */
       public Builder setAction(org.whispersystems.libsignal.protocol.SignalProtos.RatchetedDynamicMulticastMessage.Action value) {
         if (value == null) {
@@ -5595,7 +5595,7 @@ public final class SignalProtos {
         return this;
       }
       /**
-       * <code>optional .textsecure.InMemoryRDMStore.Action action = 1;</code>
+       * <code>optional .textsecure.RatchetedDynamicMulticastMessage.Action action = 1;</code>
        */
       public Builder clearAction() {
         bitField0_ = (bitField0_ & ~0x00000001);
@@ -5973,10 +5973,10 @@ public final class SignalProtos {
       }
 
 
-      // @@protoc_insertion_point(builder_scope:textsecure.InMemoryRDMStore)
+      // @@protoc_insertion_point(builder_scope:textsecure.RatchetedDynamicMulticastMessage)
     }
 
-    // @@protoc_insertion_point(class_scope:textsecure.InMemoryRDMStore)
+    // @@protoc_insertion_point(class_scope:textsecure.RatchetedDynamicMulticastMessage)
     private static final org.whispersystems.libsignal.protocol.SignalProtos.RatchetedDynamicMulticastMessage DEFAULT_INSTANCE;
     static {
       DEFAULT_INSTANCE = new org.whispersystems.libsignal.protocol.SignalProtos.RatchetedDynamicMulticastMessage();

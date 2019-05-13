@@ -183,6 +183,15 @@ public final class StorageProtos {
      * <code>optional .textsecure.SessionStructure.RatchetDynamicMulticastStructure ratchetDynamicMulticastStructure = 15;</code>
      */
     org.whispersystems.libsignal.state.StorageProtos.SessionStructure.RatchetDynamicMulticastStructureOrBuilder getRatchetDynamicMulticastStructureOrBuilder();
+
+    /**
+     * <code>optional uint32 RatchetCounter = 16;</code>
+     */
+    boolean hasRatchetCounter();
+    /**
+     * <code>optional uint32 RatchetCounter = 16;</code>
+     */
+    int getRatchetCounter();
   }
   /**
    * Protobuf type {@code textsecure.SessionStructure}
@@ -207,6 +216,7 @@ public final class StorageProtos {
       needsRefresh_ = false;
       aliceBaseKey_ = com.google.protobuf.ByteString.EMPTY;
       receiverRootKey_ = com.google.protobuf.ByteString.EMPTY;
+      ratchetCounter_ = 0;
     }
 
     @java.lang.Override
@@ -346,6 +356,11 @@ public final class StorageProtos {
                 ratchetDynamicMulticastStructure_ = subBuilder.buildPartial();
               }
               bitField0_ |= 0x00002000;
+              break;
+            }
+            case 128: {
+              bitField0_ |= 0x00004000;
+              ratchetCounter_ = input.readUInt32();
               break;
             }
           }
@@ -5580,6 +5595,21 @@ public final class StorageProtos {
       return ratchetDynamicMulticastStructure_ == null ? org.whispersystems.libsignal.state.StorageProtos.SessionStructure.RatchetDynamicMulticastStructure.getDefaultInstance() : ratchetDynamicMulticastStructure_;
     }
 
+    public static final int RATCHETCOUNTER_FIELD_NUMBER = 16;
+    private int ratchetCounter_;
+    /**
+     * <code>optional uint32 RatchetCounter = 16;</code>
+     */
+    public boolean hasRatchetCounter() {
+      return ((bitField0_ & 0x00004000) == 0x00004000);
+    }
+    /**
+     * <code>optional uint32 RatchetCounter = 16;</code>
+     */
+    public int getRatchetCounter() {
+      return ratchetCounter_;
+    }
+
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
       byte isInitialized = memoizedIsInitialized;
@@ -5636,6 +5666,9 @@ public final class StorageProtos {
       }
       if (((bitField0_ & 0x00002000) == 0x00002000)) {
         output.writeMessage(15, getRatchetDynamicMulticastStructure());
+      }
+      if (((bitField0_ & 0x00004000) == 0x00004000)) {
+        output.writeUInt32(16, ratchetCounter_);
       }
       unknownFields.writeTo(output);
     }
@@ -5704,6 +5737,10 @@ public final class StorageProtos {
       if (((bitField0_ & 0x00002000) == 0x00002000)) {
         size += com.google.protobuf.CodedOutputStream
           .computeMessageSize(15, getRatchetDynamicMulticastStructure());
+      }
+      if (((bitField0_ & 0x00004000) == 0x00004000)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeUInt32Size(16, ratchetCounter_);
       }
       size += unknownFields.getSerializedSize();
       memoizedSize = size;
@@ -5794,6 +5831,11 @@ public final class StorageProtos {
         result = result && getRatchetDynamicMulticastStructure()
             .equals(other.getRatchetDynamicMulticastStructure());
       }
+      result = result && (hasRatchetCounter() == other.hasRatchetCounter());
+      if (hasRatchetCounter()) {
+        result = result && (getRatchetCounter()
+            == other.getRatchetCounter());
+      }
       result = result && unknownFields.equals(other.unknownFields);
       return result;
     }
@@ -5865,6 +5907,10 @@ public final class StorageProtos {
       if (hasRatchetDynamicMulticastStructure()) {
         hash = (37 * hash) + RATCHETDYNAMICMULTICASTSTRUCTURE_FIELD_NUMBER;
         hash = (53 * hash) + getRatchetDynamicMulticastStructure().hashCode();
+      }
+      if (hasRatchetCounter()) {
+        hash = (37 * hash) + RATCHETCOUNTER_FIELD_NUMBER;
+        hash = (53 * hash) + getRatchetCounter();
       }
       hash = (29 * hash) + unknownFields.hashCode();
       memoizedHashCode = hash;
@@ -6050,6 +6096,8 @@ public final class StorageProtos {
           ratchetDynamicMulticastStructureBuilder_.clear();
         }
         bitField0_ = (bitField0_ & ~0x00004000);
+        ratchetCounter_ = 0;
+        bitField0_ = (bitField0_ & ~0x00008000);
         return this;
       }
 
@@ -6155,6 +6203,10 @@ public final class StorageProtos {
         } else {
           result.ratchetDynamicMulticastStructure_ = ratchetDynamicMulticastStructureBuilder_.build();
         }
+        if (((from_bitField0_ & 0x00008000) == 0x00008000)) {
+          to_bitField0_ |= 0x00004000;
+        }
+        result.ratchetCounter_ = ratchetCounter_;
         result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
@@ -6264,6 +6316,9 @@ public final class StorageProtos {
         }
         if (other.hasRatchetDynamicMulticastStructure()) {
           mergeRatchetDynamicMulticastStructure(other.getRatchetDynamicMulticastStructure());
+        }
+        if (other.hasRatchetCounter()) {
+          setRatchetCounter(other.getRatchetCounter());
         }
         this.mergeUnknownFields(other.unknownFields);
         onChanged();
@@ -7338,6 +7393,38 @@ public final class StorageProtos {
           ratchetDynamicMulticastStructure_ = null;
         }
         return ratchetDynamicMulticastStructureBuilder_;
+      }
+
+      private int ratchetCounter_ ;
+      /**
+       * <code>optional uint32 RatchetCounter = 16;</code>
+       */
+      public boolean hasRatchetCounter() {
+        return ((bitField0_ & 0x00008000) == 0x00008000);
+      }
+      /**
+       * <code>optional uint32 RatchetCounter = 16;</code>
+       */
+      public int getRatchetCounter() {
+        return ratchetCounter_;
+      }
+      /**
+       * <code>optional uint32 RatchetCounter = 16;</code>
+       */
+      public Builder setRatchetCounter(int value) {
+        bitField0_ |= 0x00008000;
+        ratchetCounter_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional uint32 RatchetCounter = 16;</code>
+       */
+      public Builder clearRatchetCounter() {
+        bitField0_ = (bitField0_ & ~0x00008000);
+        ratchetCounter_ = 0;
+        onChanged();
+        return this;
       }
       public final Builder setUnknownFields(
           final com.google.protobuf.UnknownFieldSet unknownFields) {
@@ -20380,7 +20467,7 @@ public final class StorageProtos {
   static {
     java.lang.String[] descriptorData = {
       "\n\032LocalStorageProtocol.proto\022\ntextsecure" +
-      "\"\347\n\n\020SessionStructure\022\026\n\016sessionVersion\030" +
+      "\"\377\n\n\020SessionStructure\022\026\n\016sessionVersion\030" +
       "\001 \001(\r\022\033\n\023localIdentityPublic\030\002 \001(\014\022\034\n\024re" +
       "moteIdentityPublic\030\003 \001(\014\022\017\n\007rootKey\030\004 \001(" +
       "\014\022\027\n\017previousCounter\030\005 \001(\r\0227\n\013senderChai" +
@@ -20396,76 +20483,77 @@ public final class StorageProtos {
       "erRootKey\030\016 \001(\014\022g\n ratchetDynamicMultica" +
       "stStructure\030\017 \001(\0132=.textsecure.SessionSt" +
       "ructure.RatchetDynamicMulticastStructure" +
-      "\032\271\002\n\005Chain\022\030\n\020senderRatchetKey\030\001 \001(\014\022\037\n\027" +
-      "senderRatchetKeyPrivate\030\002 \001(\014\022=\n\010chainKe" +
-      "y\030\003 \001(\0132+.textsecure.SessionStructure.Ch",
-      "ain.ChainKey\022B\n\013messageKeys\030\004 \003(\0132-.text" +
-      "secure.SessionStructure.Chain.MessageKey" +
-      "\032&\n\010ChainKey\022\r\n\005index\030\001 \001(\r\022\013\n\003key\030\002 \001(\014" +
-      "\032J\n\nMessageKey\022\r\n\005index\030\001 \001(\r\022\021\n\tcipherK" +
-      "ey\030\002 \001(\014\022\016\n\006macKey\030\003 \001(\014\022\n\n\002iv\030\004 \001(\014\032\315\001\n" +
-      "\022PendingKeyExchange\022\020\n\010sequence\030\001 \001(\r\022\024\n" +
-      "\014localBaseKey\030\002 \001(\014\022\033\n\023localBaseKeyPriva" +
-      "te\030\003 \001(\014\022\027\n\017localRatchetKey\030\004 \001(\014\022\036\n\026loc" +
-      "alRatchetKeyPrivate\030\005 \001(\014\022\030\n\020localIdenti" +
-      "tyKey\030\007 \001(\014\022\037\n\027localIdentityKeyPrivate\030\010",
-      " \001(\014\032J\n\rPendingPreKey\022\020\n\010preKeyId\030\001 \001(\r\022" +
-      "\026\n\016signedPreKeyId\030\003 \001(\005\022\017\n\007baseKey\030\002 \001(\014" +
-      "\032\217\001\n RatchetDynamicMulticastStructure\022\035\n" +
-      "\025ownEphemeralPublicKey\030\001 \001(\014\022\035\n\025ownEphem" +
-      "eralSecretKey\030\002 \001(\014\022\035\n\025allEphemeralPubli" +
-      "cKey\030\003 \003(\014\022\016\n\006macKey\030\004 \001(\014\"\177\n\017RecordStru" +
-      "cture\0224\n\016currentSession\030\001 \001(\0132\034.textsecu" +
-      "re.SessionStructure\0226\n\020previousSessions\030" +
-      "\002 \003(\0132\034.textsecure.SessionStructure\"\\\n\026A" +
-      "ddressRecordStructure\022\014\n\004name\030\001 \001(\t\0224\n\017r",
-      "ecordStructure\030\002 \001(\0132\033.textsecure.Record" +
-      "Structure\"_\n\031AllAddressRecordStructure\022B" +
-      "\n\026addressRecordStructure\030\001 \003(\0132\".textsec" +
-      "ure.AddressRecordStructure\"J\n\025PreKeyReco" +
-      "rdStructure\022\n\n\002id\030\001 \001(\r\022\021\n\tpublicKey\030\002 \001" +
-      "(\014\022\022\n\nprivateKey\030\003 \001(\014\"v\n\033SignedPreKeyRe" +
-      "cordStructure\022\n\n\002id\030\001 \001(\r\022\021\n\tpublicKey\030\002" +
-      " \001(\014\022\022\n\nprivateKey\030\003 \001(\014\022\021\n\tsignature\030\004 " +
-      "\001(\014\022\021\n\ttimestamp\030\005 \001(\006\"V\n-RatchetDynamic" +
-      "MulticastDeviceKeyPairStructure\022\021\n\tpubli",
-      "cKey\030\001 \001(\014\022\022\n\nprivateKey\030\002 \001(\014\"\332\001\n1Ratch" +
-      "etDynamicMulticastMessageEncAddJoinStruc" +
-      "ture\022\017\n\007session\030\001 \001(\014\022\032\n\022ownIdentityKeyP" +
-      "air\030\002 \001(\014\022\034\n\024theirIdentityKeyPair\030\003 \001(\014\022" +
-      ">\n\rsigned_prekey\030\004 \003(\0132\'.textsecure.Sign" +
-      "edPreKeyRecordStructure\022\032\n\022allDevicePubl" +
-      "icKey\030\005 \003(\014\"k\n\'RatchetDynamicMulticastMe" +
-      "ssageStructure\022\030\n\020secretRatchetKey\030\001 \001(\014" +
-      "\022\030\n\020publicRatchetKey\030\002 \001(\014\022\014\n\004text\030\003 \001(\014" +
-      "\"I\n-RatchetDynamicMulticastMessageRevoke",
-      "Structure\022\030\n\020secretRatchetKey\030\001 \001(\014\"B\n#R" +
-      "atchetDynamicMulticastAddStructure\022\016\n\006ma" +
-      "cKey\030\001 \001(\014\022\013\n\003tag\030\002 \001(\014\"\260\002\n#RatchetDynam" +
-      "icMulticastEncStructure\022D\n\007message\030\001 \001(\013" +
-      "23.textsecure.RatchetDynamicMulticastMes" +
-      "sageStructure\022S\n\014join_message\030\002 \001(\0132=.te" +
-      "xtsecure.RatchetDynamicMulticastMessageE" +
-      "ncAddJoinStructure\022Q\n\016revoke_message\030\003 \001" +
-      "(\01329.textsecure.RatchetDynamicMulticastM" +
-      "essageRevokeStructure\022\016\n\006macKey\030\004 \001(\014\022\013\n",
-      "\003tag\030\005 \001(\014\"A\n\030IdentityKeyPairStructure\022\021" +
-      "\n\tpublicKey\030\001 \001(\014\022\022\n\nprivateKey\030\002 \001(\014\"\270\003" +
-      "\n\027SenderKeyStateStructure\022\023\n\013senderKeyId" +
-      "\030\001 \001(\r\022J\n\016senderChainKey\030\002 \001(\01322.textsec" +
-      "ure.SenderKeyStateStructure.SenderChainK" +
-      "ey\022N\n\020senderSigningKey\030\003 \001(\01324.textsecur" +
-      "e.SenderKeyStateStructure.SenderSigningK" +
-      "ey\022O\n\021senderMessageKeys\030\004 \003(\01324.textsecu" +
-      "re.SenderKeyStateStructure.SenderMessage" +
-      "Key\0321\n\016SenderChainKey\022\021\n\titeration\030\001 \001(\r",
-      "\022\014\n\004seed\030\002 \001(\014\0323\n\020SenderMessageKey\022\021\n\tit" +
-      "eration\030\001 \001(\r\022\014\n\004seed\030\002 \001(\014\0323\n\020SenderSig" +
-      "ningKey\022\016\n\006public\030\001 \001(\014\022\017\n\007private\030\002 \001(\014" +
-      "\"X\n\030SenderKeyRecordStructure\022<\n\017senderKe" +
-      "yStates\030\001 \003(\0132#.textsecure.SenderKeyStat" +
-      "eStructureB3\n\"org.whispersystems.libsign" +
-      "al.stateB\rStorageProtos"
+      "\022\026\n\016RatchetCounter\030\020 \001(\r\032\271\002\n\005Chain\022\030\n\020se" +
+      "nderRatchetKey\030\001 \001(\014\022\037\n\027senderRatchetKey" +
+      "Private\030\002 \001(\014\022=\n\010chainKey\030\003 \001(\0132+.textse",
+      "cure.SessionStructure.Chain.ChainKey\022B\n\013" +
+      "messageKeys\030\004 \003(\0132-.textsecure.SessionSt" +
+      "ructure.Chain.MessageKey\032&\n\010ChainKey\022\r\n\005" +
+      "index\030\001 \001(\r\022\013\n\003key\030\002 \001(\014\032J\n\nMessageKey\022\r" +
+      "\n\005index\030\001 \001(\r\022\021\n\tcipherKey\030\002 \001(\014\022\016\n\006macK" +
+      "ey\030\003 \001(\014\022\n\n\002iv\030\004 \001(\014\032\315\001\n\022PendingKeyExcha" +
+      "nge\022\020\n\010sequence\030\001 \001(\r\022\024\n\014localBaseKey\030\002 " +
+      "\001(\014\022\033\n\023localBaseKeyPrivate\030\003 \001(\014\022\027\n\017loca" +
+      "lRatchetKey\030\004 \001(\014\022\036\n\026localRatchetKeyPriv" +
+      "ate\030\005 \001(\014\022\030\n\020localIdentityKey\030\007 \001(\014\022\037\n\027l",
+      "ocalIdentityKeyPrivate\030\010 \001(\014\032J\n\rPendingP" +
+      "reKey\022\020\n\010preKeyId\030\001 \001(\r\022\026\n\016signedPreKeyI" +
+      "d\030\003 \001(\005\022\017\n\007baseKey\030\002 \001(\014\032\217\001\n RatchetDyna" +
+      "micMulticastStructure\022\035\n\025ownEphemeralPub" +
+      "licKey\030\001 \001(\014\022\035\n\025ownEphemeralSecretKey\030\002 " +
+      "\001(\014\022\035\n\025allEphemeralPublicKey\030\003 \003(\014\022\016\n\006ma" +
+      "cKey\030\004 \001(\014\"\177\n\017RecordStructure\0224\n\016current" +
+      "Session\030\001 \001(\0132\034.textsecure.SessionStruct" +
+      "ure\0226\n\020previousSessions\030\002 \003(\0132\034.textsecu" +
+      "re.SessionStructure\"\\\n\026AddressRecordStru",
+      "cture\022\014\n\004name\030\001 \001(\t\0224\n\017recordStructure\030\002" +
+      " \001(\0132\033.textsecure.RecordStructure\"_\n\031All" +
+      "AddressRecordStructure\022B\n\026addressRecordS" +
+      "tructure\030\001 \003(\0132\".textsecure.AddressRecor" +
+      "dStructure\"J\n\025PreKeyRecordStructure\022\n\n\002i" +
+      "d\030\001 \001(\r\022\021\n\tpublicKey\030\002 \001(\014\022\022\n\nprivateKey" +
+      "\030\003 \001(\014\"v\n\033SignedPreKeyRecordStructure\022\n\n" +
+      "\002id\030\001 \001(\r\022\021\n\tpublicKey\030\002 \001(\014\022\022\n\nprivateK" +
+      "ey\030\003 \001(\014\022\021\n\tsignature\030\004 \001(\014\022\021\n\ttimestamp" +
+      "\030\005 \001(\006\"V\n-RatchetDynamicMulticastDeviceK",
+      "eyPairStructure\022\021\n\tpublicKey\030\001 \001(\014\022\022\n\npr" +
+      "ivateKey\030\002 \001(\014\"\332\001\n1RatchetDynamicMultica" +
+      "stMessageEncAddJoinStructure\022\017\n\007session\030" +
+      "\001 \001(\014\022\032\n\022ownIdentityKeyPair\030\002 \001(\014\022\034\n\024the" +
+      "irIdentityKeyPair\030\003 \001(\014\022>\n\rsigned_prekey" +
+      "\030\004 \003(\0132\'.textsecure.SignedPreKeyRecordSt" +
+      "ructure\022\032\n\022allDevicePublicKey\030\005 \003(\014\"k\n\'R" +
+      "atchetDynamicMulticastMessageStructure\022\030" +
+      "\n\020secretRatchetKey\030\001 \001(\014\022\030\n\020publicRatche" +
+      "tKey\030\002 \001(\014\022\014\n\004text\030\003 \001(\014\"I\n-RatchetDynam",
+      "icMulticastMessageRevokeStructure\022\030\n\020sec" +
+      "retRatchetKey\030\001 \001(\014\"B\n#RatchetDynamicMul" +
+      "ticastAddStructure\022\016\n\006macKey\030\001 \001(\014\022\013\n\003ta" +
+      "g\030\002 \001(\014\"\260\002\n#RatchetDynamicMulticastEncSt" +
+      "ructure\022D\n\007message\030\001 \001(\01323.textsecure.Ra" +
+      "tchetDynamicMulticastMessageStructure\022S\n" +
+      "\014join_message\030\002 \001(\0132=.textsecure.Ratchet" +
+      "DynamicMulticastMessageEncAddJoinStructu" +
+      "re\022Q\n\016revoke_message\030\003 \001(\01329.textsecure." +
+      "RatchetDynamicMulticastMessageRevokeStru",
+      "cture\022\016\n\006macKey\030\004 \001(\014\022\013\n\003tag\030\005 \001(\014\"A\n\030Id" +
+      "entityKeyPairStructure\022\021\n\tpublicKey\030\001 \001(" +
+      "\014\022\022\n\nprivateKey\030\002 \001(\014\"\270\003\n\027SenderKeyState" +
+      "Structure\022\023\n\013senderKeyId\030\001 \001(\r\022J\n\016sender" +
+      "ChainKey\030\002 \001(\01322.textsecure.SenderKeySta" +
+      "teStructure.SenderChainKey\022N\n\020senderSign" +
+      "ingKey\030\003 \001(\01324.textsecure.SenderKeyState" +
+      "Structure.SenderSigningKey\022O\n\021senderMess" +
+      "ageKeys\030\004 \003(\01324.textsecure.SenderKeyStat" +
+      "eStructure.SenderMessageKey\0321\n\016SenderCha",
+      "inKey\022\021\n\titeration\030\001 \001(\r\022\014\n\004seed\030\002 \001(\014\0323" +
+      "\n\020SenderMessageKey\022\021\n\titeration\030\001 \001(\r\022\014\n" +
+      "\004seed\030\002 \001(\014\0323\n\020SenderSigningKey\022\016\n\006publi" +
+      "c\030\001 \001(\014\022\017\n\007private\030\002 \001(\014\"X\n\030SenderKeyRec" +
+      "ordStructure\022<\n\017senderKeyStates\030\001 \003(\0132#." +
+      "textsecure.SenderKeyStateStructureB3\n\"or" +
+      "g.whispersystems.libsignal.stateB\rStorag" +
+      "eProtos"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
         new com.google.protobuf.Descriptors.FileDescriptor.    InternalDescriptorAssigner() {
@@ -20484,7 +20572,7 @@ public final class StorageProtos {
     internal_static_textsecure_SessionStructure_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_textsecure_SessionStructure_descriptor,
-        new java.lang.String[] { "SessionVersion", "LocalIdentityPublic", "RemoteIdentityPublic", "RootKey", "PreviousCounter", "SenderChain", "ReceiverChains", "PendingKeyExchange", "PendingPreKey", "RemoteRegistrationId", "LocalRegistrationId", "NeedsRefresh", "AliceBaseKey", "ReceiverRootKey", "RatchetDynamicMulticastStructure", });
+        new java.lang.String[] { "SessionVersion", "LocalIdentityPublic", "RemoteIdentityPublic", "RootKey", "PreviousCounter", "SenderChain", "ReceiverChains", "PendingKeyExchange", "PendingPreKey", "RemoteRegistrationId", "LocalRegistrationId", "NeedsRefresh", "AliceBaseKey", "ReceiverRootKey", "RatchetDynamicMulticastStructure", "RatchetCounter", });
     internal_static_textsecure_SessionStructure_Chain_descriptor =
       internal_static_textsecure_SessionStructure_descriptor.getNestedTypes().get(0);
     internal_static_textsecure_SessionStructure_Chain_fieldAccessorTable = new

@@ -451,16 +451,15 @@ public class InMemoryRDMStore extends InMemorySignalProtocolStore implements RDM
                 //recompose une KeyPair
                 ECKeyPair ourNewSigEphemeralKeyPair = new ECKeyPair(ourNewSigEphemeralPublic, ourNewSigEphemeralPrivate);
                 if (!equalsPriv || !equalsPub) {
-                    RootKey rootKey = sessionRecord.getSessionState().getReceiverRootKey();//FIXME recuperer aussi cle publique
+                    RootKey rootKey = sessionRecord.getSessionState().getRootKey();//FIXME recuperer aussi cle publique
                     ECPublicKey theirSigEphemeral = sessionRecord.getSessionState().getLatestReceiverRatchetKey();
                     Pair<RootKey, ChainKey> chain = rootKey.createChain(theirSigEphemeral, ourNewSigEphemeralKeyPair);
                     SessionState currentState = sessionRecord.getSessionState();
                     sessionRecord.getSessionState().setRootKey(chain.first());
                     sessionRecord.getSessionState().setPreviousCounter(Math.max(currentState.getSenderChainKey().getIndex() - 1, 0));
                     sessionRecord.getSessionState().setSenderChain(ourNewSigEphemeralKeyPair, chain.second());
-
+                    sessionRecord.getSessionState().setRatchetCounter(currentState.getRatchetCounter() + 1);
                 }
-
                 //ajout Celine
                 //fait même maj des chain key/message key que celui qui fait le encrypt Signal
                 System.out.println("deb dec2, chainkey index =" +  sessionRecord.getSessionState().getSenderChainKey().getIndex());

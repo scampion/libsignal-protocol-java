@@ -233,6 +233,16 @@ public class SessionState {
                 .build();
     }
 
+    public int getRatchetCounter() {
+        return sessionStructure.getRatchetCounter();
+    }
+
+    public void setRatchetCounter(int ratchetCounter) {
+        this.sessionStructure = this.sessionStructure.toBuilder()
+                .setRatchetCounter(ratchetCounter)
+                .build();
+    }
+
     public RootKey getRootKey() {
         return new RootKey(HKDF.createFor(getSessionVersion()),
                 this.sessionStructure.getRootKey().toByteArray());

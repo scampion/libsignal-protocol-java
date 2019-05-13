@@ -71,6 +71,7 @@ message SessionStructure {
 
     optional bytes receiverRootKey = 14;
     optional RatchetDynamicMulticastStructure ratchetDynamicMulticastStructure = 15;
+    optional uint32 RatchetCounter     = 16;
 }
 
 message RecordStructure {

@@ -255,7 +255,7 @@ public class SessionCipher {
 
             try {
                 SessionState sessionState = new SessionState(sessionRecord.getSessionState());
-                byte[] plaintext = decrypt(sessionState, ciphertext);
+                byte[] plaintext = decrypt2(sessionState, ciphertext);
 
                 sessionRecord.setState(sessionState);
                 return plaintext;
@@ -267,7 +267,7 @@ public class SessionCipher {
             while (previousStates.hasNext()) {
                 try {
                     SessionState promotedState = new SessionState(previousStates.next());
-                    byte[] plaintext = decrypt(promotedState, ciphertext);
+                    byte[] plaintext = decrypt2(promotedState, ciphertext);
 
                     previousStates.remove();
                     sessionRecord.promoteState(promotedState);
@@ -311,62 +311,6 @@ public class SessionCipher {
 
         return plaintext;
     }
-
-//
-//    //ajout Celine 23 avril pour test
-//    public byte[] decryptSingleRatchet(SignalMessage ciphertext)
-//            throws InvalidMessageException, DuplicateMessageException, LegacyMessageException,
-//            NoSessionException, UntrustedIdentityException {
-//        if (!sessionStore.containsSession(remoteAddress)) {
-//            throw new NoSessionException("No session for: " + remoteAddress);
-//        }
-//
-//        SessionRecord sessionRecord = sessionStore.loadSession(remoteAddress);
-//        SessionState sessionState = new SessionState(sessionRecord.getSessionState());
-//            byte[] plaintext = decrypt(sessionState, ciphertext);
-//            sessionRecord.setState(sessionState);
-//
-//
-//       // if (!identityKeyStore.isTrustedIdentity(remoteAddress, sessionRecord.getSessionState().getRemoteIdentityKey(), IdentityKeyStore.Direction.RECEIVING)) {
-//       //     throw new UntrustedIdentityException(remoteAddress.getName(), sessionRecord.getSessionState().getRemoteIdentityKey());
-//       // }
-//        // identityKeyStore.saveIdentity(remoteAddress, sessionRecord.getSessionState().getRemoteIdentityKey());
-//
-//        sessionStore.storeSession(remoteAddress, sessionRecord);
-//
-//        return plaintext;
-//    }
-//
-//
-//    private byte[] decryptSingleRatchet(SessionState sessionState, SignalMessage ciphertextMessage)
-//            throws InvalidMessageException, DuplicateMessageException, LegacyMessageException {
-//        if (!sessionState.hasSenderChain()) {
-//            throw new InvalidMessageException("Uninitialized session!");
-//        }
-//
-//        if (ciphertextMessage.getMessageVersion() != sessionState.getSessionVersion()) {
-//            throw new InvalidMessageException(String.format("Message version %d, but session version %d",
-//                    ciphertextMessage.getMessageVersion(),
-//                    sessionState.getSessionVersion()));
-//        }
-//
-//        ECPublicKey theirEphemeral = ciphertextMessage.getSenderRatchetKey();
-//        int counter = ciphertextMessage.getCounter();
-//        ChainKey chainKey = updateReceiverChain(sessionState, theirEphemeral);
-//        MessageKeys messageKeys = getOrCreateMessageKeys(sessionState, theirEphemeral,
-//                chainKey, counter);
-//
-//        ciphertextMessage.verifyMac(sessionState.getRemoteIdentityKey(),
-//                sessionState.getLocalIdentityKey(),
-//                messageKeys.getMacKey());
-//
-//        byte[] plaintext = getPlaintext(messageKeys, ciphertextMessage.getBody());
-//
-//        sessionState.clearUnacknowledgedPreKeyMessage();
-//
-//        return plaintext;
-//    }
-//    //fin ajout Céline
 
 
 
@@ -424,10 +368,99 @@ public class SessionCipher {
         return new java.lang.String(hexChars);
     }
 
-    public void half_ratchet(SessionState sessionState) throws InvalidKeyException, InvalidMessageException, DuplicateMessageException {
-        ChainKey chainKey = getOrCreateChainKey(sessionState);
-        ECPublicKey theirEphemeral = sessionState.getLatestReceiverRatchetKey();
+    public void half_ratchet() throws InvalidKeyException, InvalidMessageException, DuplicateMessageException {
+        SessionRecord sessionRecord = sessionStore.loadSession(remoteAddress);
+        SessionState sessionState = sessionRecord.getSessionState();
+        getOrCreateChainKey(sessionState);
+        sessionState.getLatestReceiverRatchetKey();
+        int ratchetCounter = sessionState.getRatchetCounter();
+      //  System.out.println("dans half ratchet RatchetCounter 1 : "+ratchetCounter);
+        sessionState.setRatchetCounter(ratchetCounter+1);
+        sessionStore.storeSession(remoteAddress, sessionRecord);
        // getOrCreateMessageKeys(sessionState, theirEphemeral, chainKey, 1); deja fait dans encrypt
+    }
+
+
+    //ajout Celine. Decrypt qui ne fait que l'update de la receiver chain
+    private byte[] decrypt2(SessionState sessionState, SignalMessage ciphertextMessage)
+            throws InvalidMessageException, DuplicateMessageException, LegacyMessageException {
+        if (!sessionState.hasSenderChain()) {
+            throw new InvalidMessageException("Uninitialized session!");
+        }
+
+        if (ciphertextMessage.getMessageVersion() != sessionState.getSessionVersion()) {
+            throw new InvalidMessageException(String.format("Message version %d, but session version %d",
+                    ciphertextMessage.getMessageVersion(),
+                    sessionState.getSessionVersion()));
+        }
+
+        ECPublicKey theirEphemeral = ciphertextMessage.getSenderRatchetKey();
+        int counter = ciphertextMessage.getCounter();
+        ChainKey chainKey = updateReceiverChain(sessionState, theirEphemeral);
+        MessageKeys messageKeys = getOrCreateMessageKeys(sessionState, theirEphemeral,
+                chainKey, counter);
+        sessionState.setRatchetCounter(0);
+
+        ciphertextMessage.verifyMac(sessionState.getRemoteIdentityKey(),
+                sessionState.getLocalIdentityKey(),
+                messageKeys.getMacKey());
+
+        byte[] plaintext = getPlaintext(messageKeys, ciphertextMessage.getBody());
+
+        sessionState.clearUnacknowledgedPreKeyMessage();
+        return plaintext;
+    }
+
+    //encrypt qui fait l'update de la sender chain
+    public CiphertextMessage encrypt2(byte[] paddedMessage) throws UntrustedIdentityException, InvalidMessageException, InvalidKeyException {
+        synchronized (SESSION_LOCK) {
+            SessionRecord sessionRecord = sessionStore.loadSession(remoteAddress);
+            SessionState sessionState = sessionRecord.getSessionState();
+            int ratchetCounter = sessionState.getRatchetCounter();
+            ChainKey chainKey;
+            if(ratchetCounter==0) {
+         //       System.out.println("passe dans condition encrypt");
+                chainKey = getOrCreateChainKey(sessionState);
+                //ratchetCounter++;
+                sessionState.setRatchetCounter(1);
+            }
+            else{
+                chainKey = sessionState.getSenderChainKey();
+            }
+      //      System.out.println("dans ecnrypt après if RatchetCounter: "+ sessionState.getRatchetCounter());
+            MessageKeys messageKeys = chainKey.getMessageKeys();
+            ECPublicKey senderEphemeral = sessionState.getSenderRatchetKey();
+            int previousCounter = sessionState.getPreviousCounter();
+            int sessionVersion = sessionState.getSessionVersion();
+
+            byte[] ciphertextBody = getCiphertext(messageKeys, paddedMessage);
+            CiphertextMessage ciphertextMessage = new SignalMessage(sessionVersion, messageKeys.getMacKey(),
+                    senderEphemeral, chainKey.getIndex(),
+                    previousCounter, ciphertextBody,
+                    sessionState.getLocalIdentityKey(),
+                    sessionState.getRemoteIdentityKey());
+
+            if (sessionState.hasUnacknowledgedPreKeyMessage()) {
+                UnacknowledgedPreKeyMessageItems items = sessionState.getUnacknowledgedPreKeyMessageItems();
+                int localRegistrationId = sessionState.getLocalRegistrationId();
+
+                ciphertextMessage = new PreKeySignalMessage(sessionVersion, localRegistrationId, items.getPreKeyId(),
+                        items.getSignedPreKeyId(), items.getBaseKey(),
+                        sessionState.getLocalIdentityKey(),
+                        (SignalMessage) ciphertextMessage);
+            }
+
+            sessionState.setSenderChainKey(chainKey.getNextChainKey());
+      //      System.out.println("fin encrypt, chain key index = "+ sessionState.getSenderChainKey().getIndex());
+
+            if (!identityKeyStore.isTrustedIdentity(remoteAddress, sessionState.getRemoteIdentityKey(), IdentityKeyStore.Direction.SENDING)) {
+                throw new UntrustedIdentityException(remoteAddress.getName(), sessionState.getRemoteIdentityKey());
+            }
+
+            identityKeyStore.saveIdentity(remoteAddress, sessionState.getRemoteIdentityKey());
+            sessionStore.storeSession(remoteAddress, sessionRecord);
+            return ciphertextMessage;
+        }
     }
 
     //ajout Celine 23 avril
@@ -448,8 +481,6 @@ public class SessionCipher {
                     sessionState.setRootKey(receiverChain.first());
                     sessionState.addReceiverChain(theirEphemeral, receiverChain.second());
                     //sessionState.setPreviousCounter(Math.max(sessionState.getSenderChainKey().getIndex() - 1, 0));
-
-
                     return receiverChain.second();
                 }
             } catch (InvalidKeyException e) {
@@ -468,7 +499,8 @@ public class SessionCipher {
     private ChainKey getOrCreateChainKey(SessionState sessionState)
             throws InvalidMessageException, InvalidKeyException {
         try {
-            RootKey rootKey = sessionState.getReceiverRootKey();
+            //RootKey rootKey = sessionState.getReceiverRootKey();
+            RootKey rootKey = sessionState.getRootKey();
             ECKeyPair ourNewEphemeral = Curve.generateKeyPair();
             ECPublicKey theirEphemeral = sessionState.getLatestReceiverRatchetKey();
             Pair<RootKey, ChainKey> chain = rootKey.createChain(theirEphemeral, ourNewEphemeral);
