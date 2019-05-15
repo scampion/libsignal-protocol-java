@@ -211,7 +211,7 @@ public class InMemoryRDMStore extends InMemorySignalProtocolStore implements RDM
             e.printStackTrace();
             return;
         }
-        System.out.println(msg.getName());
+        //System.out.println(msg.getName());
         SignalProtocolAddress ad = new SignalProtocolAddress(msg.getName(), 1);
         if (msg.getAction() == SignalProtos.RatchetedDynamicMulticastMessage.Action.ENC_JOIN) {
             try {
