@@ -541,6 +541,128 @@ public class SessionCipherTest extends TestCase {
     }
 
 
+    public void testRatchetDynamicMulticast100() throws NoSessionException, InvalidKeySpecException, LegacyMessageException, IOException, InvalidMessageException, DuplicateMessageException, InvalidKeyException, UntrustedIdentityException {
+        testRatchetDynamicMulticast(100);
+    }
+
+    public void testRatchetDynamicMulticast(int nb_of_messages)
+            throws InvalidKeyException, DuplicateMessageException,
+            LegacyMessageException, InvalidMessageException, NoSessionException, UntrustedIdentityException, InvalidKeySpecException, IOException {
+        SessionRecord aliceSessionRecord = new SessionRecord();
+        SessionRecord bobSessionRecord = new SessionRecord();
+
+        initializeSessionsV3(aliceSessionRecord.getSessionState(), bobSessionRecord.getSessionState());
+
+        RDMStore aliceStore = new TestInMemoryRDMStore();
+        RDMStore bobStore = new TestInMemoryRDMStore();
+        SignalProtocolAddress bob_ad = new SignalProtocolAddress("+14159999999", 1);
+        aliceStore.storeSession(bob_ad, aliceSessionRecord);
+        bobStore.storeSession(new SignalProtocolAddress("+14158888888", 1), bobSessionRecord);
+
+        SessionCipher aliceCipher = new SessionCipher(aliceStore, bob_ad);
+        SessionCipher bobCipher = new SessionCipher(bobStore, new SignalProtocolAddress("+14158888888", 1));
+        byte[] alicePlaintext = "Hello Bob !".getBytes();
+        CiphertextMessage message = aliceCipher.encrypt(alicePlaintext);
+        bobCipher.decrypt(new SignalMessage(message.serialize()));
+
+        RDMStore aliceStoreNewDevice = new TestInMemoryRDMStore();
+
+        ArrayList<byte[]> messages = aliceStore.addjoin(aliceStoreNewDevice.getDevicePublicKey());
+        aliceStoreNewDevice.decJoin(messages);
+
+        // Run half-ratchet
+        SessionRecord sr = aliceStore.loadSession(bob_ad);
+        aliceCipher.half_ratchet();
+        message = aliceCipher.encrypt2(new byte[0]);
+        bobCipher.decrypt(new SignalMessage(message.serialize()));
+        byte[] msg = aliceStore.enc_add_join(bob_ad);
+        aliceStoreNewDevice.dec_add_join(msg);
+
+        SessionCipher aliceCipherNewDevice = new SessionCipher(aliceStoreNewDevice, bob_ad);
+
+        RDMStore aliceStoreNewDevice2 = new TestInMemoryRDMStore();
+        messages = aliceStore.addjoin(aliceStoreNewDevice2.getDevicePublicKey());
+        aliceStoreNewDevice2.decJoin(messages);
+        aliceStoreNewDevice.decAdd(messages);
+        // Run half-ratchet
+        aliceStore.loadSession(bob_ad);
+        aliceCipher.half_ratchet();
+        message = aliceCipher.encrypt2(new byte[0]);
+        bobCipher.decrypt(new SignalMessage(message.serialize()));
+
+
+        msg = aliceStore.enc_add_join(bob_ad);
+        aliceStoreNewDevice2.dec_add_join(msg);
+        aliceStoreNewDevice.dec_add_join(msg);
+        SessionCipher aliceCipherNewDevice2 = new SessionCipher(aliceStoreNewDevice2, bob_ad);
+        
+        Pair<SessionCipher, RDMStore> d1 = new Pair<>(aliceCipher, aliceStore);
+        Pair<SessionCipher, RDMStore> d2 = new Pair<>(aliceCipherNewDevice, aliceStoreNewDevice);
+        Pair<SessionCipher, RDMStore> d3 = new Pair<>(aliceCipherNewDevice2, aliceStoreNewDevice2);
+        List<Pair<SessionCipher, RDMStore>> devices = Arrays.asList(d1, d2, d3);
+
+        CiphertextMessage reply;
+        for(int i = 0; i < 10000; i++){
+            String uuid = UUID.randomUUID().toString();
+            Random rand = new Random();
+            int index = rand.nextInt(devices.size());
+            SessionCipher randomAliceCipher = devices.get(index).first();
+            RDMStore randomAliceStore = devices.get(index).second();
+            msg = uuid.getBytes();
+            System.out.println("using alice cipher "+ index + " - message: " + i + " : " + uuid);
+            reply = randomAliceCipher.encrypt2(msg);
+            byte[] enc = randomAliceStore.enc(bob_ad, msg);
+            for(int j = 0; j < devices.size(); j++){
+                if (j != index) {
+                    devices.get(j).second().dec(enc);
+                }
+            }
+
+            byte[] read = bobCipher.decrypt(new SignalMessage(reply.serialize()));
+            assertTrue(Arrays.equals(msg, read));
+            String s = new String(read) + i;
+            CiphertextMessage bobreply = bobCipher.encrypt2(s.getBytes());
+
+            for(int j = 0; j < devices.size(); j++){
+                SessionCipher cipher = devices.get(j).first();
+                byte[] ans = cipher.decrypt(new SignalMessage(bobreply.serialize()));
+                System.out.println(j + " " + new String(ans) );
+                assertTrue(Arrays.equals(s.getBytes(), ans));
+            }
+        }
+
+
+
+
+        for(int i = 0; i < 10000; i++){
+            String uuid = UUID.randomUUID().toString();
+            Random rand = new Random();
+            int index = rand.nextInt(devices.size());
+            SessionCipher randomAliceCipher = devices.get(index).first();
+            RDMStore randomAliceStore = devices.get(index).second();
+            msg = uuid.getBytes();
+            System.out.println("using alice cipher "+ index + " - message: " + i + " : " + uuid);
+            reply = randomAliceCipher.encrypt2(msg);
+            byte[] enc = randomAliceStore.enc(bob_ad, msg);
+            for(int j = 0; j < devices.size(); j++){
+                if (j != index) {
+                    devices.get(j).second().dec(enc);
+                }
+            }
+
+            byte[] read = bobCipher.decrypt(new SignalMessage(reply.serialize()));
+            assertTrue(Arrays.equals(msg, read));
+            String s = new String(read) + i;
+            CiphertextMessage bobreply = bobCipher.encrypt2(s.getBytes());
+
+            for(int j = 0; j < devices.size(); j++){
+                SessionCipher cipher = devices.get(j).first();
+                byte[] ans = cipher.decrypt(new SignalMessage(bobreply.serialize()));
+                System.out.println(j + " " + new String(ans) );
+                assertTrue(Arrays.equals(s.getBytes(), ans));
+            }
+        }
+    }
 
     public void testBasicSessionV3()
             throws InvalidKeyException, DuplicateMessageException,
