@@ -89,7 +89,11 @@ public class SessionCipherTest extends TestCase {
 
   }
 
-  public void testSesame1000message() throws InvalidKeyException, DuplicateMessageException,
+  public void testSesame1000() throws NoSessionException, LegacyMessageException, InvalidMessageException, DuplicateMessageException, InvalidKeyException, UntrustedIdentityException {
+    testSesame(1000);
+  }
+
+  public void testSesame(int nb_of_interactions) throws InvalidKeyException, DuplicateMessageException,
           LegacyMessageException, InvalidMessageException, NoSessionException, UntrustedIdentityException {
     SessionRecord bobSessionRecord1 = new SessionRecord();
     SessionRecord bobSessionRecord2 = new SessionRecord();
@@ -185,12 +189,12 @@ public class SessionCipherTest extends TestCase {
 
     byte[] msg;
     byte[] decrypt;
-    for (int i = 0; i < 10000; i++) {
+    for (int i = 0; i < nb_of_interactions; i++) {
       String uuid = UUID.randomUUID().toString();
       Random rand = new Random();
       int index = rand.nextInt(devices.size());
       msg = uuid.getBytes();
-      System.out.println("using alice cipher " + index + " - message: " + i + " : " + uuid);
+//      System.out.println("using alice cipher " + index + " - message: " + i + " : " + uuid);
       int k = 0;
       for (SessionCipher sc : devices.get(index)) {
         if (sc != null) {
@@ -203,9 +207,9 @@ public class SessionCipherTest extends TestCase {
       k = 1;
       for (int j = 0; j < devices.size(); j++) {
         if (j != index) {
-          System.out.println(j + " " +  index + 1  + " " + k);
+//          System.out.println(j + " " +  index + 1  + " " + k);
           byte[] decrypt1 = devices.get(j).get(index + 1).decrypt(new SignalMessage(replies.get(k).serialize()));
-          System.out.println(new String(decrypt1));
+//          System.out.println(new String(decrypt1));
           k++;
           }
       }
