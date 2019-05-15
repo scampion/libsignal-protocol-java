@@ -412,7 +412,7 @@ public class SessionCipherTest extends TestCase {
         System.out.println(new String(bobPlaintext));
 
         byte[] bobReply = "Hi Alice !".getBytes();
-        CiphertextMessage reply = bobCipher.encrypt(bobReply);
+        CiphertextMessage reply = bobCipher.encrypt2(bobReply);
         byte[] receivedReply = aliceCipher.decrypt(new SignalMessage(reply.serialize()));
 
         System.out.println(new String(receivedReply));
@@ -431,7 +431,7 @@ public class SessionCipherTest extends TestCase {
         SessionRecord sessionRecord = new SessionRecord(sr.serialize());
         SessionState sessionState = sessionRecord.getSessionState();
         aliceCipher.half_ratchet();
-        message = aliceCipher.encrypt(new byte[0]);
+        message = aliceCipher.encrypt2(new byte[0]);
         bobCipher.decrypt(new SignalMessage(message.serialize()));
 
 
@@ -441,7 +441,7 @@ public class SessionCipherTest extends TestCase {
 
         // Test if bob reply can be read by both devices
         byte[] bobReplyB = "How are you ?".getBytes();
-        CiphertextMessage replyB = bobCipher.encrypt(bobReplyB);
+        CiphertextMessage replyB = bobCipher.encrypt2(bobReplyB);
         byte[] rr = aliceCipher.decrypt(new SignalMessage(replyB.serialize()));
 
         SessionCipher aliceCipherNewDevice = new SessionCipher(aliceStoreNewDevice, bob_ad);
@@ -452,7 +452,7 @@ public class SessionCipherTest extends TestCase {
 
         //Alice envoie un message à Bob depuis son nouveau device
         byte[] aliceNewDeviceReplyC = "Fine, I test my new device".getBytes();
-        CiphertextMessage replyC = aliceCipherNewDevice.encrypt(aliceNewDeviceReplyC);
+        CiphertextMessage replyC = aliceCipherNewDevice.encrypt2(aliceNewDeviceReplyC);
 
         //alice new device envoie le RDM message à l'ancien device
         msg =  aliceStoreNewDevice.enc(bob_ad, aliceNewDeviceReplyC);
@@ -463,7 +463,7 @@ public class SessionCipherTest extends TestCase {
         System.out.println("Ce que Bob à reçu :"+ new String(readC));
         //
         byte[] bobReplyC = "How are you Alice ?".getBytes();
-        CiphertextMessage bobreplyC = bobCipher.encrypt(bobReplyC);
+        CiphertextMessage bobreplyC = bobCipher.encrypt2(bobReplyC);
         System.out.println(" received by new device from bob :" + new String(aliceCipherNewDevice.decrypt(new SignalMessage(bobreplyC.serialize()))));
         System.out.println(" received by first device from bob :" + new String(aliceCipher.decrypt(new SignalMessage(bobreplyC.serialize()))));
 
@@ -479,7 +479,7 @@ public class SessionCipherTest extends TestCase {
         sessionRecord = new SessionRecord(sr.serialize());
         sessionState = sessionRecord.getSessionState();
         aliceCipher.half_ratchet();
-        message = aliceCipher.encrypt(new byte[0]);
+        message = aliceCipher.encrypt2(new byte[0]);
         bobCipher.decrypt(new SignalMessage(message.serialize()));
 
 
@@ -493,7 +493,7 @@ public class SessionCipherTest extends TestCase {
         // test si le troisieme device peut envoyer un message
         SessionCipher aliceCipherNewDevice2 = new SessionCipher(aliceStoreNewDevice2, bob_ad);
         byte[] aliceNewDeviceReplyD = "Fine, I test my new device 3".getBytes();
-        CiphertextMessage replyD = aliceCipherNewDevice2.encrypt(aliceNewDeviceReplyD);
+        CiphertextMessage replyD = aliceCipherNewDevice2.encrypt2(aliceNewDeviceReplyD);
 
         msg =  aliceStoreNewDevice2.enc(bob_ad, aliceNewDeviceReplyD);
         byte[] rec_msg_1 = aliceStore.dec(msg);
@@ -518,7 +518,7 @@ public class SessionCipherTest extends TestCase {
             RDMStore randomAliceStore = devices.get(index).second();
             msg = uuid.getBytes();
             System.out.println("using alice cipher "+ index + " - message: " + i + " : " + uuid);
-            reply = randomAliceCipher.encrypt(msg);
+            reply = randomAliceCipher.encrypt2(msg);
             byte[] enc = randomAliceStore.enc(bob_ad, msg);
             for(int j = 0; j < devices.size(); j++){
                 if (j != index) {
@@ -529,7 +529,7 @@ public class SessionCipherTest extends TestCase {
             byte[] read = bobCipher.decrypt(new SignalMessage(reply.serialize()));
             assertTrue(Arrays.equals(msg, read));
             String s = new String(read) + i;
-            CiphertextMessage bobreply = bobCipher.encrypt(s.getBytes());
+            CiphertextMessage bobreply = bobCipher.encrypt2(s.getBytes());
 
             for(int j = 0; j < devices.size(); j++){
                 SessionCipher cipher = devices.get(j).first();
