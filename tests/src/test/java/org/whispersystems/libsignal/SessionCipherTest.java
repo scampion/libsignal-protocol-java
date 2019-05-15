@@ -95,6 +95,9 @@ public class SessionCipherTest extends TestCase {
 
   public void testSesame(int nb_of_interactions) throws InvalidKeyException, DuplicateMessageException,
           LegacyMessageException, InvalidMessageException, NoSessionException, UntrustedIdentityException {
+    int nb_connection = 0;
+    int nb_bytes = 0;
+
     SessionRecord bobSessionRecord1 = new SessionRecord();
     SessionRecord bobSessionRecord2 = new SessionRecord();
     SessionRecord bobSessionRecord3 = new SessionRecord();
@@ -162,21 +165,34 @@ public class SessionCipherTest extends TestCase {
     CiphertextMessage message;
     message = alice1CipherBob.encrypt(alicePlaintext);
     BobCipherA1.decrypt(new SignalMessage(message.serialize()));
+    nb_connection++;
+    nb_bytes = nb_bytes + message.serialize().length;
 
     message = alice2CipherBob.encrypt(alicePlaintext);
     BobCipherA2.decrypt(new SignalMessage(message.serialize()));
+    nb_connection++;
+    nb_bytes = nb_bytes + message.serialize().length;
+
 
     message = alice3CipherBob.encrypt(alicePlaintext);
     BobCipherA3.decrypt(new SignalMessage(message.serialize()));
+    nb_connection++;
+    nb_bytes = nb_bytes + message.serialize().length;
 
     message = alice1CipherA2.encrypt(alicePlaintext);
     alice2CipherA1.decrypt(new SignalMessage(message.serialize()));
+    nb_connection++;
+    nb_bytes = nb_bytes + message.serialize().length;
 
     message = alice1CipherA3.encrypt(alicePlaintext);
     alice3CipherA1.decrypt(new SignalMessage(message.serialize()));
+    nb_connection++;
+    nb_bytes = nb_bytes + message.serialize().length;
 
     message = alice2CipherA3.encrypt(alicePlaintext);
     alice3CipherA2.decrypt(new SignalMessage(message.serialize()));
+    nb_connection++;
+    nb_bytes = nb_bytes + message.serialize().length;
 
     List<SessionCipher> d0 = Arrays.asList(null, BobCipherA1, BobCipherA2, BobCipherA3);
     List<SessionCipher> d1 = Arrays.asList(alice1CipherBob, null, alice1CipherA2, alice1CipherA3);
@@ -199,6 +215,9 @@ public class SessionCipherTest extends TestCase {
       for (SessionCipher sc : devices.get(index)) {
         if (sc != null) {
           reply = sc.encrypt(msg);
+          nb_connection++;
+          nb_bytes = nb_bytes + msg.length;
+
           replies.add(k, reply);
           k++;
         }
@@ -208,12 +227,20 @@ public class SessionCipherTest extends TestCase {
       for (int j = 0; j < devices.size(); j++) {
         if (j != index) {
 //          System.out.println(j + " " +  index + 1  + " " + k);
-          byte[] decrypt1 = devices.get(j).get(index + 1).decrypt(new SignalMessage(replies.get(k).serialize()));
+          SignalMessage ciphertext = new SignalMessage(replies.get(k).serialize());
+          byte[] decrypt1 = devices.get(j).get(index + 1).decrypt(ciphertext);
+          nb_connection++;
+          nb_bytes = nb_bytes + ciphertext.serialize().length;
+
 //          System.out.println(new String(decrypt1));
           k++;
           }
       }
-      decrypt = d0.get(index + 1).decrypt(new SignalMessage(replies.get(0).serialize()));
+      SignalMessage ciphertext = new SignalMessage(replies.get(0).serialize());
+      decrypt = d0.get(index + 1).decrypt(ciphertext);
+      nb_connection++;
+      nb_bytes = nb_bytes + ciphertext.serialize().length;
+
       assertTrue(Arrays.equals(msg, decrypt));
 
       // Bob reply
@@ -222,16 +249,23 @@ public class SessionCipherTest extends TestCase {
       for (SessionCipher sc : d0) {
         if (sc != null) {
           reply = sc.encrypt(s.getBytes());
+          nb_connection++;
+          nb_bytes = nb_bytes + reply.serialize().length;
           replies.add(k, reply);
           k++;
         }
       }
 
       for (int j = 0; j < devices.size(); j++) {
-        decrypt = devices.get(j).get(0).decrypt(new SignalMessage(replies.get(j).serialize()));
+        SignalMessage ciphertext1 = new SignalMessage(replies.get(j).serialize());
+        decrypt = devices.get(j).get(0).decrypt(ciphertext1);
+        nb_connection++;
+        nb_bytes = nb_bytes + ciphertext1.serialize().length;
       }
       assertTrue(Arrays.equals(decrypt, s.getBytes()));
     }
+    System.out.println(nb_connection);
+    System.out.println(nb_bytes);
   }
 
 
