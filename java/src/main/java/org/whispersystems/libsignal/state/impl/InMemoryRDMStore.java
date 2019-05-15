@@ -322,7 +322,7 @@ public class InMemoryRDMStore extends InMemorySignalProtocolStore implements RDM
             List<ByteString> allEphemeralPublicKeyList = ephemaralUpdater.getAllEphemeralPublicKeyList();
             byte[] tag = ephemaralUpdater.getTag();
 
-            System.out.println(bytesToHex(sr.getSessionState().getLatestRatchetKeyPrivate()));
+//            System.out.println(bytesToHex(sr.getSessionState().getLatestRatchetKeyPrivate()));
             // build message
             StorageProtos.RatchetDynamicMulticastMessageStructure txtmsg = StorageProtos.RatchetDynamicMulticastMessageStructure.newBuilder()
                     .setText(ByteString.copyFrom(text))
@@ -422,7 +422,7 @@ public class InMemoryRDMStore extends InMemorySignalProtocolStore implements RDM
             e.printStackTrace();
             return "".getBytes();
         }
-        System.out.println(msg.getName());
+//        System.out.println(msg.getName());
         SignalProtocolAddress ad = new SignalProtocolAddress(msg.getName(), 1);
         if (msg.getAction() == SignalProtos.RatchetedDynamicMulticastMessage.Action.ENC) {
             try {
@@ -462,11 +462,11 @@ public class InMemoryRDMStore extends InMemorySignalProtocolStore implements RDM
                 }
                 //ajout Celine
                 //fait même maj des chain key/message key que celui qui fait le encrypt Signal
-                System.out.println("deb dec2, chainkey index =" +  sessionRecord.getSessionState().getSenderChainKey().getIndex());
+//                System.out.println("deb dec2, chainkey index =" +  sessionRecord.getSessionState().getSenderChainKey().getIndex());
                 ChainKey chainKey = sessionRecord.getSessionState().getSenderChainKey();
 //                sessionRecord.getSessionState().setSenderChainKey(chainKey.getNextChainKey());//FIXME c'est la le pb, n'enregistre pas l'avancée de l'index des chain key!
                 sessionRecord.getSessionState().setSenderChainKey(chainKey.getNextChainKey());//FIXME c'est la le pb, n'enregistre pas l'avancée de l'index des chain key!
-                 System.out.println("fin dec2, chainkey index =" +  sessionRecord.getSessionState().getSenderChainKey().getIndex());
+//                 System.out.println("fin dec2, chainkey index =" +  sessionRecord.getSessionState().getSenderChainKey().getIndex());
                 //fin ajout Céline
 
                 storeSession(ad, sessionRecord);

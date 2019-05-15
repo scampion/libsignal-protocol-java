@@ -115,7 +115,7 @@ public class SessionCipher {
             }
 
             sessionState.setSenderChainKey(chainKey.getNextChainKey());
-            System.out.println("fin encrypt, chain key index = "+ sessionState.getSenderChainKey().getIndex());
+//            System.out.println("fin encrypt, chain key index = "+ sessionState.getSenderChainKey().getIndex());
 
             if (!identityKeyStore.isTrustedIdentity(remoteAddress, sessionState.getRemoteIdentityKey(), IdentityKeyStore.Direction.SENDING)) {
                 throw new UntrustedIdentityException(remoteAddress.getName(), sessionState.getRemoteIdentityKey());
@@ -278,7 +278,7 @@ public class SessionCipher {
                     e.printStackTrace();
                 }
             }
-            System.out.println(exceptions);
+//            System.out.println(exceptions);
             throw new InvalidMessageException("No valid sessions.", exceptions);
         }
     }

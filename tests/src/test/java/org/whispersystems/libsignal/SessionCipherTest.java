@@ -681,8 +681,8 @@ public class SessionCipherTest extends TestCase {
         }
     }
 
-    public void testRatchetDynamicMulticast100() throws NoSessionException, InvalidKeySpecException, LegacyMessageException, IOException, InvalidMessageException, DuplicateMessageException, InvalidKeyException, UntrustedIdentityException {
-        testRatchetDynamicMulticast(100);
+    public void testRatchetDynamicMulticast1000() throws NoSessionException, InvalidKeySpecException, LegacyMessageException, IOException, InvalidMessageException, DuplicateMessageException, InvalidKeyException, UntrustedIdentityException {
+        testRatchetDynamicMulticast(1000);
     }
 
     public void testRatchetDynamicMulticast(int nb_of_messages)
@@ -742,14 +742,15 @@ public class SessionCipherTest extends TestCase {
         List<Pair<SessionCipher, RDMStore>> devices = Arrays.asList(d1, d2, d3);
 
         CiphertextMessage reply;
-        for (int i = 0; i < 10000; i++) {
+        System.out.println("Start Loop");
+        for (int i = 0; i < nb_of_messages; i++) {
             String uuid = UUID.randomUUID().toString();
             Random rand = new Random();
             int index = rand.nextInt(devices.size());
             SessionCipher randomAliceCipher = devices.get(index).first();
             RDMStore randomAliceStore = devices.get(index).second();
             msg = uuid.getBytes();
-            System.out.println("using alice cipher " + index + " - message: " + i + " : " + uuid);
+//            System.out.println("using alice cipher " + index + " - message: " + i + " : " + uuid);
             reply = randomAliceCipher.encrypt2(msg);
             byte[] enc = randomAliceStore.enc(bob_ad, msg);
             for (int j = 0; j < devices.size(); j++) {
@@ -766,7 +767,7 @@ public class SessionCipherTest extends TestCase {
             for (int j = 0; j < devices.size(); j++) {
                 SessionCipher cipher = devices.get(j).first();
                 byte[] ans = cipher.decrypt(new SignalMessage(bobreply.serialize()));
-                System.out.println(j + " " + new String(ans));
+//                System.out.println(j + " " + new String(ans));
                 assertTrue(Arrays.equals(s.getBytes(), ans));
             }
         }
