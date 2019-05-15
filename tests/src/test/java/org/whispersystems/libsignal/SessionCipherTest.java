@@ -16,19 +16,14 @@ import org.whispersystems.libsignal.state.SessionState;
 import org.whispersystems.libsignal.util.guava.Optional;
 
 import java.security.NoSuchAlgorithmException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Random;
+import java.util.*;
 
 
 public class SessionCipherTest extends TestCase {
 
   public void testBasicSessionV3()
-      throws InvalidKeyException, DuplicateMessageException,
-      LegacyMessageException, InvalidMessageException, NoSuchAlgorithmException, NoSessionException, UntrustedIdentityException
+          throws InvalidKeyException, DuplicateMessageException,
+          LegacyMessageException, InvalidMessageException, NoSuchAlgorithmException, NoSessionException, UntrustedIdentityException
   {
     SessionRecord aliceSessionRecord = new SessionRecord();
     SessionRecord bobSessionRecord   = new SessionRecord();
@@ -68,6 +63,174 @@ public class SessionCipherTest extends TestCase {
       // good
     }
   }
+
+  public void testBasicSessionV4()
+          throws InvalidKeyException, DuplicateMessageException,
+          LegacyMessageException, InvalidMessageException, NoSuchAlgorithmException, NoSessionException, UntrustedIdentityException
+  {
+    SessionRecord aliceSessionRecord = new SessionRecord();
+    SessionRecord bobSessionRecord   = new SessionRecord();
+
+    initializeSessionsV3(aliceSessionRecord.getSessionState(), bobSessionRecord.getSessionState());
+    SignalProtocolStore aliceStore = new TestInMemorySignalProtocolStore();
+    SignalProtocolStore bobStore   = new TestInMemorySignalProtocolStore();
+
+    aliceStore.storeSession(new SignalProtocolAddress("+14159999999", 1), aliceSessionRecord);
+    bobStore.storeSession(new SignalProtocolAddress("+14158888888", 1), bobSessionRecord);
+
+    SessionCipher     aliceCipher    = new SessionCipher(aliceStore, new SignalProtocolAddress("+14159999999", 1));
+    SessionCipher     bobCipher      = new SessionCipher(bobStore, new SignalProtocolAddress("+14158888888", 1));
+
+    byte[]            alicePlaintext = "This is a plaintext message.".getBytes();
+    CiphertextMessage message        = aliceCipher.encrypt(alicePlaintext);
+    byte[]            bobPlaintext   = bobCipher.decrypt(new SignalMessage(message.serialize()));
+
+    assertTrue(Arrays.equals(alicePlaintext, bobPlaintext));
+
+  }
+
+  public void testSesame1000message() throws InvalidKeyException, DuplicateMessageException,
+          LegacyMessageException, InvalidMessageException, NoSessionException, UntrustedIdentityException {
+    SessionRecord bobSessionRecord1 = new SessionRecord();
+    SessionRecord bobSessionRecord2 = new SessionRecord();
+    SessionRecord bobSessionRecord3 = new SessionRecord();
+    SessionRecord alice1SessionRecordBob = new SessionRecord();
+    SessionRecord alice2SessionRecordBob = new SessionRecord();
+    SessionRecord alice3SessionRecordBob = new SessionRecord();
+    SessionRecord alice1SessionRecordA2 = new SessionRecord();
+    SessionRecord alice1SessionRecordA3 = new SessionRecord();
+    SessionRecord alice2SessionRecordA1 = new SessionRecord();
+    SessionRecord alice2SessionRecordA3 = new SessionRecord();
+    SessionRecord alice3SessionRecordA1 = new SessionRecord();
+    SessionRecord alice3SessionRecordA2 = new SessionRecord();
+
+
+    initializeSessionsV3(alice1SessionRecordBob.getSessionState(), bobSessionRecord1.getSessionState());
+    initializeSessionsV3(alice2SessionRecordBob.getSessionState(), bobSessionRecord2.getSessionState());
+    initializeSessionsV3(alice3SessionRecordBob.getSessionState(), bobSessionRecord3.getSessionState());
+    initializeSessionsV3(alice1SessionRecordA2.getSessionState(), alice2SessionRecordA1.getSessionState());
+    initializeSessionsV3(alice1SessionRecordA3.getSessionState(), alice3SessionRecordA1.getSessionState());
+    initializeSessionsV3(alice2SessionRecordA3.getSessionState(), alice3SessionRecordA2.getSessionState());
+
+    SignalProtocolAddress bob_ad = new SignalProtocolAddress("+14159999999", 1);
+    SignalProtocolAddress alice_ad1 = new SignalProtocolAddress("+14158888887", 1);
+    SignalProtocolAddress alice_ad2 = new SignalProtocolAddress("+14158888888", 1);
+    SignalProtocolAddress alice_ad3 = new SignalProtocolAddress("+14158888889", 1);
+
+    SignalProtocolStore aliceStore1 = new TestInMemorySignalProtocolStore();
+    SignalProtocolStore aliceStore2 = new TestInMemorySignalProtocolStore();
+    SignalProtocolStore aliceStore3 = new TestInMemorySignalProtocolStore();
+    SignalProtocolStore bobStore = new TestInMemorySignalProtocolStore();
+
+    aliceStore1.storeSession(bob_ad, alice1SessionRecordBob);
+    aliceStore1.storeSession(alice_ad2, alice1SessionRecordA2);
+    aliceStore1.storeSession(alice_ad3, alice1SessionRecordA3);
+    aliceStore2.storeSession(bob_ad, alice2SessionRecordBob);
+    aliceStore2.storeSession(alice_ad1, alice2SessionRecordA1);
+    aliceStore2.storeSession(alice_ad3, alice2SessionRecordA3);
+    aliceStore3.storeSession(bob_ad, alice3SessionRecordBob);
+    aliceStore3.storeSession(alice_ad2, alice3SessionRecordA2);
+    aliceStore3.storeSession(alice_ad1, alice3SessionRecordA1);
+
+    bobStore.storeSession(alice_ad1, bobSessionRecord1);
+    bobStore.storeSession(alice_ad2, bobSessionRecord2);
+    bobStore.storeSession(alice_ad3, bobSessionRecord3);
+
+
+    SessionCipher alice1CipherBob = new SessionCipher(aliceStore1, bob_ad);
+    SessionCipher alice1CipherA2 = new SessionCipher(aliceStore1, alice_ad2);
+    SessionCipher alice1CipherA3 = new SessionCipher(aliceStore1, alice_ad3);
+
+    SessionCipher alice2CipherBob = new SessionCipher(aliceStore2, bob_ad);
+    SessionCipher alice2CipherA1 = new SessionCipher(aliceStore2, alice_ad1);
+    SessionCipher alice2CipherA3 = new SessionCipher(aliceStore2, alice_ad3);
+
+    SessionCipher alice3CipherBob = new SessionCipher(aliceStore3, bob_ad);
+    SessionCipher alice3CipherA1 = new SessionCipher(aliceStore3, alice_ad1);
+    SessionCipher alice3CipherA2 = new SessionCipher(aliceStore3, alice_ad2);
+
+    SessionCipher BobCipherA1 = new SessionCipher(bobStore, alice_ad1);
+    SessionCipher BobCipherA2 = new SessionCipher(bobStore, alice_ad2);
+    SessionCipher BobCipherA3 = new SessionCipher(bobStore, alice_ad3);
+
+
+    byte[] alicePlaintext = "Hello Bob !".getBytes();
+    CiphertextMessage message;
+    message = alice1CipherBob.encrypt(alicePlaintext);
+    BobCipherA1.decrypt(new SignalMessage(message.serialize()));
+
+    message = alice2CipherBob.encrypt(alicePlaintext);
+    BobCipherA2.decrypt(new SignalMessage(message.serialize()));
+
+    message = alice3CipherBob.encrypt(alicePlaintext);
+    BobCipherA3.decrypt(new SignalMessage(message.serialize()));
+
+    message = alice1CipherA2.encrypt(alicePlaintext);
+    alice2CipherA1.decrypt(new SignalMessage(message.serialize()));
+
+    message = alice1CipherA3.encrypt(alicePlaintext);
+    alice3CipherA1.decrypt(new SignalMessage(message.serialize()));
+
+    message = alice2CipherA3.encrypt(alicePlaintext);
+    alice3CipherA2.decrypt(new SignalMessage(message.serialize()));
+
+    List<SessionCipher> d0 = Arrays.asList(null, BobCipherA1, BobCipherA2, BobCipherA3);
+    List<SessionCipher> d1 = Arrays.asList(alice1CipherBob, null, alice1CipherA2, alice1CipherA3);
+    List<SessionCipher> d2 = Arrays.asList(alice2CipherBob, alice2CipherA1, null, alice2CipherA3);
+    List<SessionCipher> d3 = Arrays.asList(alice3CipherBob, alice3CipherA1, alice3CipherA2, null);
+
+    List<List<SessionCipher>> devices = Arrays.asList(d1, d2, d3);
+    CiphertextMessage reply = null;
+    ArrayList<CiphertextMessage> replies = new ArrayList<>(devices.size());
+
+    byte[] msg;
+    byte[] decrypt;
+    for (int i = 0; i < 10000; i++) {
+      String uuid = UUID.randomUUID().toString();
+      Random rand = new Random();
+      int index = rand.nextInt(devices.size());
+      msg = uuid.getBytes();
+      System.out.println("using alice cipher " + index + " - message: " + i + " : " + uuid);
+      int k = 0;
+      for (SessionCipher sc : devices.get(index)) {
+        if (sc != null) {
+          reply = sc.encrypt(msg);
+          replies.add(k, reply);
+          k++;
+        }
+      }
+
+      k = 1;
+      for (int j = 0; j < devices.size(); j++) {
+        if (j != index) {
+          System.out.println(j + " " +  index + 1  + " " + k);
+          byte[] decrypt1 = devices.get(j).get(index + 1).decrypt(new SignalMessage(replies.get(k).serialize()));
+          System.out.println(new String(decrypt1));
+          k++;
+          }
+      }
+      decrypt = d0.get(index + 1).decrypt(new SignalMessage(replies.get(0).serialize()));
+      assertTrue(Arrays.equals(msg, decrypt));
+
+      // Bob reply
+      String s = new String(decrypt) + i;
+      k = 0;
+      for (SessionCipher sc : d0) {
+        if (sc != null) {
+          reply = sc.encrypt(s.getBytes());
+          replies.add(k, reply);
+          k++;
+        }
+      }
+
+      for (int j = 0; j < devices.size(); j++) {
+        decrypt = devices.get(j).get(0).decrypt(new SignalMessage(replies.get(j).serialize()));
+      }
+      assertTrue(Arrays.equals(decrypt, s.getBytes()));
+    }
+  }
+
+
 
   private void runInteraction(SessionRecord aliceSessionRecord, SessionRecord bobSessionRecord)
       throws DuplicateMessageException, LegacyMessageException, InvalidMessageException, NoSuchAlgorithmException, NoSessionException, UntrustedIdentityException {
