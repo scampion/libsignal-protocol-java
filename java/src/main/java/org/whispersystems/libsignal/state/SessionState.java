@@ -9,6 +9,7 @@ package org.whispersystems.libsignal.state;
 
 import com.google.protobuf.ByteString;
 
+import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.whispersystems.libsignal.IdentityKey;
 import org.whispersystems.libsignal.IdentityKeyPair;
 import org.whispersystems.libsignal.InvalidKeyException;
@@ -29,11 +30,8 @@ import org.whispersystems.libsignal.util.guava.Optional;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.security.KeyPair;
-import java.security.KeyPairGenerator;
-import java.security.NoSuchAlgorithmException;
-import java.security.PrivateKey;
-import java.security.PublicKey;
+import java.security.*;
+import java.security.spec.ECGenParameterSpec;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.LinkedList;
@@ -54,15 +52,16 @@ public class SessionState {
 
 
     public SessionState() {
+        Security.addProvider(new BouncyCastleProvider());
         KeyPair ephemeralRDMKeyPair;
         KeyPairGenerator keyGen = null;
         try {
-            keyGen = KeyPairGenerator.getInstance("RSA");
-        } catch (NoSuchAlgorithmException e) {
+            keyGen = KeyPairGenerator.getInstance("EC", BouncyCastleProvider.PROVIDER_NAME);
+            keyGen.initialize(new ECGenParameterSpec("secp256r1"));
+        } catch (NoSuchAlgorithmException | NoSuchProviderException | InvalidAlgorithmParameterException e) {
             e.printStackTrace();
         }
-        keyGen.initialize(512);
-        ephemeralRDMKeyPair = keyGen.genKeyPair();
+        ephemeralRDMKeyPair = keyGen.generateKeyPair();
         try {
             byte[] macKey = new byte[0];
             macKey = KeyGenerator.getInstance("HmacSHA256").generateKey().getEncoded();

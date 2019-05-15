@@ -3,6 +3,7 @@ package org.whispersystems.libsignal.state.impl;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
 
+import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.whispersystems.libsignal.IdentityKey;
 import org.whispersystems.libsignal.IdentityKeyPair;
 import org.whispersystems.libsignal.SignalProtocolAddress;
@@ -18,13 +19,8 @@ import org.whispersystems.libsignal.util.Pair;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.security.InvalidKeyException;
-import java.security.KeyFactory;
-import java.security.KeyPair;
-import java.security.KeyPairGenerator;
-import java.security.NoSuchAlgorithmException;
-import java.security.PrivateKey;
-import java.security.PublicKey;
+import java.security.*;
+import java.security.spec.ECGenParameterSpec;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.PKCS8EncodedKeySpec;
 import java.security.spec.X509EncodedKeySpec;
@@ -45,8 +41,10 @@ import javax.crypto.spec.SecretKeySpec;
 
 public class InMemoryRDMStore extends InMemorySignalProtocolStore implements RDMStore{
 
+
     public InMemoryRDMStore(IdentityKeyPair generateIdentityKeyPair, int generateRegistrationId) {
         super(generateIdentityKeyPair, generateRegistrationId);
+        Security.addProvider(new BouncyCastleProvider());
     }
 
     public byte[] join(PublicKey newDevicePublicKey) {
@@ -56,7 +54,7 @@ public class InMemoryRDMStore extends InMemorySignalProtocolStore implements RDM
         byte[] cipherJoin = new byte[0];
         try {
             Cipher cipher = null;
-            cipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
+            cipher = Cipher.getInstance("ECIES", BouncyCastleProvider.PROVIDER_NAME);
             cipher.init(Cipher.ENCRYPT_MODE, newDevicePublicKey);
             SecretKey aes = KeyGenerator.getInstance("AES").generateKey();
             wrap = cipher.doFinal(aes.getEncoded());
@@ -64,7 +62,7 @@ public class InMemoryRDMStore extends InMemorySignalProtocolStore implements RDM
             cipher = Cipher.getInstance("AES");  //FIXME use AES/ECB/PKCS5Padding ?
             cipher.init(Cipher.ENCRYPT_MODE, aes);
             cipherJoin = cipher.doFinal(dump);
-        } catch (NoSuchAlgorithmException | NoSuchPaddingException | BadPaddingException | IllegalBlockSizeException | InvalidKeyException e) {
+        } catch (NoSuchAlgorithmException | NoSuchPaddingException | BadPaddingException | IllegalBlockSizeException | InvalidKeyException | NoSuchProviderException e) {
             e.printStackTrace();
         }
 
@@ -94,7 +92,7 @@ public class InMemoryRDMStore extends InMemorySignalProtocolStore implements RDM
 
         if (msg.getAction() == SignalProtos.RatchetedDynamicMulticastMessage.Action.JOIN) {
             try {
-                Cipher cipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
+                Cipher cipher = Cipher.getInstance("ECIES", BouncyCastleProvider.PROVIDER_NAME);
                 cipher.init(Cipher.DECRYPT_MODE, getDevicePrivateKey());
                 byte[] encodedKey = new byte[0];
 
@@ -111,7 +109,7 @@ public class InMemoryRDMStore extends InMemorySignalProtocolStore implements RDM
                 byte[] dump = cipher.doFinal(msg.getCipher().toByteArray());
                 load(dump);
                 setOwnEphemeralKeys(getDevicePrivateKey(), getDevicePublicKey());
-            } catch (NoSuchAlgorithmException | NoSuchPaddingException | BadPaddingException | IllegalBlockSizeException | InvalidKeyException e) {
+            } catch (NoSuchAlgorithmException | NoSuchPaddingException | BadPaddingException | IllegalBlockSizeException | InvalidKeyException | NoSuchProviderException e) {
                 e.printStackTrace();
             }
 
@@ -152,7 +150,7 @@ public class InMemoryRDMStore extends InMemorySignalProtocolStore implements RDM
                     .setTag(ByteString.copyFrom(tag))
                     .build();
 
-            // wrap aes with all rsa pub key
+            // wrap aes with all pub key
             SecretKey aeskey = KeyGenerator.getInstance("AES").generateKey();
             List<ByteString> aes_wrap = getAESWrapList(sr, aeskey);
             // cipher rdm message
@@ -168,21 +166,22 @@ public class InMemoryRDMStore extends InMemorySignalProtocolStore implements RDM
                     .build();
 
             return msg.toByteArray();
-        } catch (IOException | NoSuchAlgorithmException | InvalidKeyException | NoSuchPaddingException | BadPaddingException | InvalidKeySpecException | IllegalBlockSizeException e1) {
+        } catch (IOException | NoSuchAlgorithmException | InvalidKeyException | NoSuchPaddingException | BadPaddingException | InvalidKeySpecException | IllegalBlockSizeException | NoSuchProviderException | InvalidAlgorithmParameterException e1) {
             e1.printStackTrace();
         }
 
         return new byte[0];
     }
 
-    private List<ByteString> getAESWrapList(SessionRecord sr, SecretKey aeskey) throws NoSuchAlgorithmException, InvalidKeySpecException, NoSuchPaddingException, InvalidKeyException, IllegalBlockSizeException, BadPaddingException {
+    private List<ByteString> getAESWrapList(SessionRecord sr, SecretKey aeskey) throws NoSuchAlgorithmException, InvalidKeySpecException, NoSuchPaddingException, InvalidKeyException, IllegalBlockSizeException, BadPaddingException, NoSuchProviderException {
         List<ByteString> aes_wrap = new ArrayList<ByteString>();
         for (ByteString e : sr.getSessionState().getAllEphemeralPublicKey()) {
             X509EncodedKeySpec ePubKeySpec = new X509EncodedKeySpec(e.toByteArray());
-            KeyFactory keyFactory = KeyFactory.getInstance("RSA");
-            PublicKey rsa_key = keyFactory.generatePublic(ePubKeySpec);
-            Cipher cipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
-            cipher.init(Cipher.ENCRYPT_MODE, rsa_key);
+
+            KeyFactory keyFactory = KeyFactory.getInstance("EC", BouncyCastleProvider.PROVIDER_NAME);
+            PublicKey ec_key = keyFactory.generatePublic(ePubKeySpec);
+            Cipher cipher = Cipher.getInstance("ECIES", BouncyCastleProvider.PROVIDER_NAME);
+            cipher.init(Cipher.ENCRYPT_MODE, ec_key);
             byte[] wrap = cipher.doFinal(aeskey.getEncoded());
             aes_wrap.add(ByteString.copyFrom(wrap));
         }
@@ -242,7 +241,7 @@ public class InMemoryRDMStore extends InMemorySignalProtocolStore implements RDM
                 ECPublicKey ecPublicKey = Curve.decodePoint(theirIdentityKeyPair.toByteArray(), 0);
                 saveIdentity(ad, new IdentityKey(ecPublicKey));
 
-            } catch (NoSuchAlgorithmException | NoSuchPaddingException | IllegalBlockSizeException | InvalidKeyException | InvalidKeySpecException | IOException | BadPaddingException | org.whispersystems.libsignal.InvalidKeyException e) {
+            } catch (NoSuchAlgorithmException | NoSuchPaddingException | IllegalBlockSizeException | InvalidKeyException | InvalidKeySpecException | IOException | BadPaddingException | org.whispersystems.libsignal.InvalidKeyException | NoSuchProviderException e) {
                 e.printStackTrace();
             }
         }
@@ -284,7 +283,7 @@ public class InMemoryRDMStore extends InMemorySignalProtocolStore implements RDM
                     .build();
 
             //Encrypts RDM add message
-            // wrap aes with all rsa pub key
+            // wrap aes with all pub key
             SecretKey aeskey = KeyGenerator.getInstance("AES").generateKey();
             List<ByteString> aes_wrap = getAESWrapList(sessionRecord, aeskey);
             // cipher rdm message
@@ -301,7 +300,7 @@ public class InMemoryRDMStore extends InMemorySignalProtocolStore implements RDM
                     //.addRDMEncryptedAddStructure(ByteString.copyFrom(cipherRDMadd))
                     .build();
             return msg.toByteArray();
-        } catch (IOException | NoSuchAlgorithmException | InvalidKeyException | NoSuchPaddingException | BadPaddingException | InvalidKeySpecException | IllegalBlockSizeException e1) {
+        } catch (IOException | NoSuchAlgorithmException | InvalidKeyException | NoSuchPaddingException | BadPaddingException | InvalidKeySpecException | IllegalBlockSizeException | NoSuchProviderException e1) {
             e1.printStackTrace();
         }
         return new byte[0];
@@ -339,7 +338,7 @@ public class InMemoryRDMStore extends InMemorySignalProtocolStore implements RDM
                     .setTag(ByteString.copyFrom(tag))
                     .build();
 
-            // wrap aes with all rsa pub key
+            // wrap aes with all pub key
             SecretKey aes = KeyGenerator.getInstance("AES").generateKey();
             List<ByteString> aes_wrap = getAESWrapList(sr, aes);
             // cipher rdm enc message
@@ -357,7 +356,7 @@ public class InMemoryRDMStore extends InMemorySignalProtocolStore implements RDM
                     .build();
 
             return msg.toByteArray();
-        } catch (IOException | NoSuchAlgorithmException | InvalidKeyException | NoSuchPaddingException | BadPaddingException | InvalidKeySpecException | IllegalBlockSizeException e1) {
+        } catch (IOException | NoSuchAlgorithmException | InvalidKeyException | NoSuchPaddingException | BadPaddingException | InvalidKeySpecException | IllegalBlockSizeException | NoSuchProviderException | InvalidAlgorithmParameterException e1) {
             e1.printStackTrace();
         }
         return new byte[0];
@@ -385,20 +384,20 @@ public class InMemoryRDMStore extends InMemorySignalProtocolStore implements RDM
                     verifyMac(msg, sessionRecord, tag, new_mac_key);
                     storeSession(ad, sessionRecord);
 
-                } catch (NoSuchAlgorithmException | NoSuchPaddingException | IllegalBlockSizeException | InvalidKeyException | InvalidKeySpecException | IOException | BadPaddingException e) {
+                } catch (NoSuchAlgorithmException | NoSuchPaddingException | IllegalBlockSizeException | InvalidKeyException | InvalidKeySpecException | IOException | BadPaddingException | NoSuchProviderException e) {
                     e.printStackTrace();
                 }
             }
         }
     }
 
-    private byte[] decrypt(SignalProtos.RatchetedDynamicMulticastMessage msg, SessionRecord sessionRecord) throws NoSuchAlgorithmException, InvalidKeySpecException, NoSuchPaddingException, InvalidKeyException, IllegalBlockSizeException, BadPaddingException {
+    private byte[] decrypt(SignalProtos.RatchetedDynamicMulticastMessage msg, SessionRecord sessionRecord) throws NoSuchAlgorithmException, InvalidKeySpecException, NoSuchPaddingException, InvalidKeyException, IllegalBlockSizeException, BadPaddingException, NoSuchProviderException {
         ByteString ownEphemeralSecretKey = sessionRecord.getSessionState().getOwnEphemeralSecretKey();
         PKCS8EncodedKeySpec eSecKeySpec = new PKCS8EncodedKeySpec(ownEphemeralSecretKey.toByteArray());
-        KeyFactory keyFactory = KeyFactory.getInstance("RSA");
-        PrivateKey rsa_key = keyFactory.generatePrivate(eSecKeySpec);
-        Cipher cipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
-        cipher.init(Cipher.DECRYPT_MODE, rsa_key);
+        KeyFactory keyFactory = KeyFactory.getInstance("EC", "BC");
+        PrivateKey ec_key = keyFactory.generatePrivate(eSecKeySpec);
+        Cipher cipher = Cipher.getInstance("ECIES", BouncyCastleProvider.PROVIDER_NAME);
+        cipher.init(Cipher.DECRYPT_MODE, ec_key);
         byte[] encodedKey = new byte[0];
         for (ByteString wrap : msg.getWrapList()) {
             try {
@@ -473,7 +472,7 @@ public class InMemoryRDMStore extends InMemorySignalProtocolStore implements RDM
 
                 return message.getText().toByteArray();
 
-            } catch (NoSuchAlgorithmException | NoSuchPaddingException | IllegalBlockSizeException | InvalidKeyException | InvalidKeySpecException | IOException | BadPaddingException | org.whispersystems.libsignal.InvalidKeyException e) {
+            } catch (NoSuchAlgorithmException | NoSuchPaddingException | IllegalBlockSizeException | InvalidKeyException | InvalidKeySpecException | IOException | BadPaddingException | org.whispersystems.libsignal.InvalidKeyException | NoSuchProviderException e) {
                 e.printStackTrace();
             }
         }
@@ -557,16 +556,16 @@ public class InMemoryRDMStore extends InMemorySignalProtocolStore implements RDM
             return tag;
         }
 
-        public EphemaralUpdater invoke() throws NoSuchAlgorithmException, InvalidKeyException, IOException {
+        public EphemaralUpdater invoke() throws NoSuchAlgorithmException, InvalidKeyException, IOException, NoSuchProviderException, InvalidAlgorithmParameterException {
             StorageProtos.SessionStructure.RatchetDynamicMulticastStructure rdms;
             rdms = sessionRecord.getSessionState().getStructure().getRatchetDynamicMulticastStructure();
             // generate new MACKey
             ByteString preMacKey = rdms.getMacKey();
             newMacKey = KeyGenerator.getInstance("HmacSHA256").generateKey().getEncoded();
             // generate new ephemeral key
-            KeyPairGenerator keyGen = KeyPairGenerator.getInstance("RSA");
-            keyGen.initialize(512);
-            KeyPair ephemeralRDMKeyPair = keyGen.genKeyPair();
+            KeyPairGenerator keyGen = KeyPairGenerator.getInstance("EC", BouncyCastleProvider.PROVIDER_NAME);
+            keyGen.initialize(new ECGenParameterSpec("secp256r1"));
+            KeyPair ephemeralRDMKeyPair = keyGen.generateKeyPair();
             ByteString pubk = ByteString.copyFrom(ephemeralRDMKeyPair.getPublic().getEncoded());
             ByteString prik = ByteString.copyFrom(ephemeralRDMKeyPair.getPrivate().getEncoded());
             // remove previous ephemeral public key from all devices public key list

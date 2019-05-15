@@ -23,7 +23,8 @@ sourceSets {
 dependencies {
     compile "org.whispersystems:curve25519-java:${curve25519_version}"
     compile 'com.google.protobuf:protobuf-java:3.6.1'
-
+    compile group: 'org.bouncycastle', name: 'bcprov-jdk15on', version: '1.61'
+    compile group: 'org.bouncycastle', name: 'bcmail-jdk15on', version: '1.61'
     testCompile ('junit:junit:3.8.2')
 }
 

@@ -7,6 +7,8 @@ package org.whispersystems.libsignal.state.impl;
 
 import com.google.protobuf.ByteString;
 
+import org.bouncycastle.jce.provider.BouncyCastleProvider;
+import org.bouncycastle.jce.spec.IEKeySpec;
 import org.whispersystems.libsignal.SignalProtocolAddress;
 import org.whispersystems.libsignal.IdentityKey;
 import org.whispersystems.libsignal.IdentityKeyPair;
@@ -17,10 +19,10 @@ import org.whispersystems.libsignal.state.SessionRecord;
 import org.whispersystems.libsignal.state.SignedPreKeyRecord;
 import org.whispersystems.libsignal.state.StorageProtos;
 
-import java.security.KeyPairGenerator;
-import java.security.NoSuchAlgorithmException;
-import java.security.PrivateKey;
-import java.security.PublicKey;
+import javax.crypto.Cipher;
+import javax.crypto.NoSuchPaddingException;
+import java.security.*;
+import java.security.spec.ECGenParameterSpec;
 import java.util.List;
 import java.util.Map;
 
@@ -43,12 +45,26 @@ public class InMemorySignalProtocolStore implements SignalProtocolStore {
   }
 
   private void setupDeviceKeys() {
+    Security.addProvider(new BouncyCastleProvider());
     KeyPairGenerator keyGen = null;
     try {
-      keyGen = KeyPairGenerator.getInstance("RSA");
-      keyGen.initialize(512);
-      deviceStore = new InMemoryDeviceKeyStore(keyGen.genKeyPair());
-    } catch (NoSuchAlgorithmException e) {
+      keyGen = KeyPairGenerator.getInstance("EC", BouncyCastleProvider.PROVIDER_NAME);
+      keyGen.initialize(new ECGenParameterSpec("secp256r1"));
+      KeyPair keyPair = keyGen.generateKeyPair();
+
+//      KeyPairGenerator kpg = KeyPairGenerator.getInstance("ECIES");
+//      kpg.initialize(new ECGenParameterSpec("secp256r1"));
+//      KeyPair keyPair = kpg.generateKeyPair();
+//
+//      Cipher cipher = Cipher.getInstance("ECIES");
+//      cipher.init(Cipher.ENCRYPT_MODE, keyPair.getPublic());
+
+//      Cipher cipher = Cipher.getInstance("ECIES", BouncyCastleProvider.PROVIDER_NAME);
+//      cipher.init(Cipher.ENCRYPT_MODE, new IEKeySpec(keyPair.getPrivate(), keyPair.getPublic()));
+
+
+      deviceStore = new InMemoryDeviceKeyStore(keyPair);
+    } catch (NoSuchAlgorithmException | InvalidAlgorithmParameterException | NoSuchProviderException e) {
       e.printStackTrace(); //FIXME
     }
   }
